@@ -39,7 +39,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onSettings, onProfile, onFr
           {profilePicture ? (
             <div 
               className="w-6 h-6 rounded-full bg-cover bg-center"
-              style={{ backgroundImage: `url(${profilePicture})` }}
+              style={{ backgroundImage: \`url(${profilePicture})` }}
             />
           ) : (
             <User size={20} />

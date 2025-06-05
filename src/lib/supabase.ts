@@ -310,7 +310,7 @@ export const saveCustomSkin = async (userId: string, skin: {
         .from('unlocked_skins')
         .insert([{
           profile_id: userId,
-          skin_id: `custom_${data.id}`
+          skin_id: \`custom_${data.id}`
         }]);
     }
 

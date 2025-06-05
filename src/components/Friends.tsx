@@ -191,7 +191,7 @@ const Friends: React.FC<FriendsProps> = ({ onBack }) => {
                   )}
                   <div>
                     <div>{friend.nickname}</div>
-                    <div className={`text-sm ${
+                    <div className={\`text-sm ${
                       friend.status === 'online' ? 'text-green-400' : 'text-gray-400'
                     }`}>
                       {friend.status === 'online' ? 'Online' : 'Offline'}
