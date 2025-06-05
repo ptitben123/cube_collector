@@ -1,3 +1,4 @@
+```typescript
 import React, { useState, useEffect } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase, initializeUserData } from './lib/supabase';
@@ -7,6 +8,7 @@ import Shop from './components/Shop';
 import Inventory from './components/Inventory';
 import Settings from './components/Settings';
 import Profile from './components/Profile';
+import Friends from './components/Friends';
 import Auth from './components/Auth';
 import { GameProvider } from './context/GameContext';
 
@@ -58,6 +60,9 @@ function App() {
         case '#/profile':
           setCurrentScreen('profile');
           break;
+        case '#/friends':
+          setCurrentScreen('friends');
+          break;
         default:
           setCurrentScreen('menu');
       }
@@ -82,7 +87,7 @@ function App() {
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-lg">Loading your game data... PRESS F5 TO RELOAD"</p>
+          <p className="text-lg">Loading your game data...</p>
         </div>
       </div>
     );
@@ -112,11 +117,13 @@ function App() {
         {currentScreen === 'inventory' && <Inventory onBack={() => { window.location.hash = '#/game'; }} />}
         {currentScreen === 'settings' && <Settings onBack={() => { window.location.hash = ''; }} />}
         {currentScreen === 'profile' && <Profile onBack={() => { window.location.hash = ''; }} />}
+        {currentScreen === 'friends' && <Friends onBack={() => { window.location.hash = ''; }} />}
         {currentScreen === 'menu' && (
           <MainMenu
             onPlay={() => { window.location.hash = '#/game'; }}
             onSettings={() => { window.location.hash = '#/settings'; }}
             onProfile={() => { window.location.hash = '#/profile'; }}
+            onFriends={() => { window.location.hash = '#/friends'; }}
           />
         )}
       </div>
@@ -124,4 +131,5 @@ function App() {
   );
 }
 
-export default App
+export default App;
+```

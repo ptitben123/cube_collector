@@ -1,3 +1,4 @@
+```typescript
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -133,6 +134,90 @@ export const saveTrophy = async (userId: string, trophyId: string) => {
   }
 };
 
+// Save friend request
+export const saveFriendRequest = async (senderId: string, receiverId: string) => {
+  try {
+    const { error } = await supabase
+      .from('friend_requests')
+      .insert([{
+        sender_id: senderId,
+        receiver_id: receiverId
+      }]);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error saving friend request:', error);
+    return false;
+  }
+};
+
+// Accept friend request
+export const acceptFriendRequest = async (userId: string, friendId: string) => {
+  try {
+    // Start a transaction
+    const { error: deleteError } = await supabase
+      .from('friend_requests')
+      .delete()
+      .match({ sender_id: friendId, receiver_id: userId });
+
+    if (deleteError) throw deleteError;
+
+    // Add friend relationship (bidirectional)
+    await Promise.all([
+      supabase.from('friends').insert([{
+        profile_id: userId,
+        friend_id: friendId
+      }]),
+      supabase.from('friends').insert([{
+        profile_id: friendId,
+        friend_id: userId
+      }])
+    ]);
+
+    return true;
+  } catch (error) {
+    console.error('Error accepting friend request:', error);
+    return false;
+  }
+};
+
+// Reject friend request
+export const rejectFriendRequest = async (userId: string, friendId: string) => {
+  try {
+    const { error } = await supabase
+      .from('friend_requests')
+      .delete()
+      .match({ sender_id: friendId, receiver_id: userId });
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error rejecting friend request:', error);
+    return false;
+  }
+};
+
+// Remove friend
+export const removeFriend = async (userId: string, friendId: string) => {
+  try {
+    // Remove both directions of the friendship
+    await Promise.all([
+      supabase.from('friends')
+        .delete()
+        .match({ profile_id: userId, friend_id: friendId }),
+      supabase.from('friends')
+        .delete()
+        .match({ profile_id: friendId, friend_id: userId })
+    ]);
+
+    return true;
+  } catch (error) {
+    console.error('Error removing friend:', error);
+    return false;
+  }
+};
+
 // Save unlocked skin
 export const saveUnlockedSkin = async (userId: string, skinId: string) => {
   try {
@@ -244,13 +329,17 @@ export const loadUserData = async (userId: string) => {
       skinsResponse,
       upgradesResponse,
       customSkinsResponse,
-      trophiesResponse
+      trophiesResponse,
+      friendsResponse,
+      friendRequestsResponse
     ] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', userId).single(),
       supabase.from('unlocked_skins').select('skin_id').eq('profile_id', userId),
       supabase.from('upgrades').select('*').eq('profile_id', userId),
       supabase.from('custom_skins').select('*').eq('profile_id', userId),
-      supabase.from('claimed_trophies').select('trophy_id').eq('profile_id', userId)
+      supabase.from('claimed_trophies').select('trophy_id').eq('profile_id', userId),
+      supabase.from('friends').select('*').eq('profile_id', userId),
+      supabase.from('friend_requests').select('*').eq('receiver_id', userId)
     ]);
 
     return {
@@ -258,10 +347,13 @@ export const loadUserData = async (userId: string) => {
       unlockedSkins: skinsResponse.data?.map(s => s.skin_id) || [],
       upgrades: upgradesResponse.data || [],
       customSkins: customSkinsResponse.data || [],
-      claimedTrophies: trophiesResponse.data?.map(t => t.trophy_id) || []
+      claimedTrophies: trophiesResponse.data?.map(t => t.trophy_id) || [],
+      friends: friendsResponse.data || [],
+      friendRequests: friendRequestsResponse.data || []
     };
   } catch (error) {
     console.error('Error loading user data:', error);
     return null;
   }
 };
+```
