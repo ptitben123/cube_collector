@@ -32,7 +32,16 @@ export const initializeUserData = async (userId: string) => {
         score: 0,
         total_collected: 0,
         total_points_gained: 0,
-        point_multiplier: 1
+        point_multiplier: 1,
+        controls: {
+          upKey: 'w',
+          downKey: 's',
+          leftKey: 'a',
+          rightKey: 'd',
+          shopKey: 'e',
+          inventoryKey: 'q'
+        },
+        claimed_trophies: []
       }]);
       
       // Add default skin
@@ -67,6 +76,8 @@ export const saveUserData = async (userId: string, data: {
   total_collected?: number;
   total_points_gained?: number;
   point_multiplier?: number;
+  controls?: Record<string, string>;
+  claimed_trophies?: string[];
 }) => {
   try {
     const { error } = await supabase
@@ -81,6 +92,43 @@ export const saveUserData = async (userId: string, data: {
     return true;
   } catch (error) {
     console.error('Error saving user data:', error);
+    return false;
+  }
+};
+
+// Save controls
+export const saveControls = async (userId: string, controls: Record<string, string>) => {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        controls,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error saving controls:', error);
+    return false;
+  }
+};
+
+// Save trophy
+export const saveTrophy = async (userId: string, trophyId: string) => {
+  try {
+    const { error } = await supabase
+      .from('claimed_trophies')
+      .insert([{
+        profile_id: userId,
+        trophy_id: trophyId
+      }]);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error saving trophy:', error);
     return false;
   }
 };
