@@ -169,14 +169,17 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
   };
 
   const formatParameterValue = (param: string, value: number) => {
+    // Ensure value is a valid number, default to 0 if undefined/null
+    const safeValue = value ?? 0;
+    
     switch (param) {
-      case 'speed': return `${value.toFixed(1)} px/frame`;
-      case 'points': return `${value.toFixed(1)}x`;
-      case 'magnet': return `${value.toFixed(0)} px`;
-      case 'spawn': return `${(value * 100).toFixed(0)}% faster`;
-      case 'bonus': return `${(value * 100).toFixed(0)}% chance`;
-      case 'combo': return `${value.toFixed(1)}x`;
-      default: return value.toString();
+      case 'speed': return `${safeValue.toFixed(1)} px/frame`;
+      case 'points': return `${safeValue.toFixed(1)}x`;
+      case 'magnet': return `${safeValue.toFixed(0)} px`;
+      case 'spawn': return `${(safeValue * 100).toFixed(0)}% faster`;
+      case 'bonus': return `${(safeValue * 100).toFixed(0)}% chance`;
+      case 'combo': return `${safeValue.toFixed(1)}x`;
+      default: return safeValue.toString();
     }
   };
 
@@ -383,7 +386,7 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
                   <Zap size={14} className="text-yellow-400" />
                   Point Multiplier
                 </span>
-                <span className="text-sm font-medium">{pointMultiplier.toFixed(1)}x</span>
+                <span className="text-sm font-medium">{(pointMultiplier ?? 1).toFixed(1)}x</span>
               </div>
             </div>
           </div>
