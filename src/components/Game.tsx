@@ -11,7 +11,6 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
   const [cubePosition, setCubePosition] = useState({ x: 0, y: 0 });
   const [collectibles, setCollectibles] = useState<{ id: number; x: number; y: number }[]>([]);
   const [nextId, setNextId] = useState(0);
-  const [showTrophies, setShowTrophies] = useState(false);
   const [lastSpawnTime, setLastSpawnTime] = useState(Date.now());
   
   const { 
@@ -153,162 +152,165 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
   };
 
   return (
-    <div className="w-full max-w-3xl flex flex-col items-center">
-      <div className="w-full flex justify-between items-center mb-4 px-4">
-        <div className="flex items-center gap-4">
-          <h2 className="text-2xl font-bold">Score: {score}</h2>
-          <span className="text-gray-400">Collected: {totalCollected}</span>
+    <div className="w-full max-w-7xl flex gap-6">
+      {/* Trophy Road Sidebar */}
+      <div className="w-80 bg-gray-800 rounded-lg p-4 h-[600px] overflow-y-auto">
+        <div className="flex items-center gap-2 mb-4">
+          <Trophy size={24} className="text-yellow-500" />
+          <h3 className="text-lg font-semibold">Trophy Road</h3>
         </div>
-        <div className="flex gap-2">
-          <button
-            className="bg-purple-600 hover:bg-purple-700 p-2 rounded-full transition-colors"
-            onClick={() => setShowTrophies(!showTrophies)}
-          >
-            <Trophy size={20} />
-          </button>
-          <button 
-            className="bg-blue-600 hover:bg-blue-700 p-2 rounded-full transition-colors"
-            onClick={() => { onExit(); window.location.href = '#/shop'; }}
-          >
-            <ShoppingBag size={20} />
-          </button>
-          <button 
-            className="bg-green-600 hover:bg-green-700 p-2 rounded-full transition-colors"
-            onClick={() => { onExit(); window.location.href = '#/inventory'; }}
-          >
-            <Package size={20} />
-          </button>
-          <button 
-            className="bg-red-600 hover:bg-red-700 p-2 rounded-full transition-colors"
-            onClick={onExit}
-          >
-            <X size={20} />
-          </button>
-        </div>
-      </div>
-
-      {showTrophies && (
-        <div className="w-full mb-4 p-4 bg-gray-800 rounded-lg">
-          <h3 className="text-lg font-semibold mb-3">Trophy Road</h3>
-          <div className="space-y-3">
-            {trophies.map((trophy, index) => {
-              const isClaimed = claimedTrophies.includes(trophy.id);
-              const isUnlocked = totalCollected >= trophy.requirement;
-              const gradientClass = getTrophyColor(trophy.tier);
-              
-              return (
-                <div key={trophy.id} className="relative">
-                  {index < trophies.length - 1 && (
-                    <div 
-                      className={`absolute left-6 top-full w-1 h-3 ${
-                        isUnlocked ? 'bg-blue-500' : 'bg-gray-700'
-                      }`}
-                    />
-                  )}
+        
+        <div className="space-y-3">
+          {trophies.map((trophy, index) => {
+            const isClaimed = claimedTrophies.includes(trophy.id);
+            const isUnlocked = totalCollected >= trophy.requirement;
+            const gradientClass = getTrophyColor(trophy.tier);
+            
+            return (
+              <div key={trophy.id} className="relative">
+                {index < trophies.length - 1 && (
+                  <div 
+                    className={`absolute left-6 top-full w-1 h-3 ${
+                      isUnlocked ? 'bg-blue-500' : 'bg-gray-700'
+                    }`}
+                  />
+                )}
+                
+                <div className={`p-3 rounded-lg bg-gradient-to-r ${gradientClass} flex items-center gap-3`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    isClaimed ? 'bg-green-500' : isUnlocked ? 'bg-blue-500' : 'bg-gray-700'
+                  }`}>
+                    <Trophy size={20} className="text-white" />
+                  </div>
                   
-                  <div className={`p-4 rounded-lg bg-gradient-to-r ${gradientClass} flex items-center gap-4`}>
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      isClaimed ? 'bg-green-500' : isUnlocked ? 'bg-blue-500' : 'bg-gray-700'
-                    }`}>
-                      <Trophy size={24} className="text-white" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="font-medium text-sm truncate">{trophy.name}</h4>
+                      <span className="text-xs whitespace-nowrap ml-2">
+                        {totalCollected}/{trophy.requirement}
+                      </span>
                     </div>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">{trophy.name}</h4>
-                        <span className="text-sm">
-                          {totalCollected}/{trophy.requirement}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-200">{trophy.description}</p>
-                      <div className="mt-2 h-2 w-full bg-gray-700 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-500 transition-all duration-300"
-                          style={{ 
-                            width: `${Math.min(100, (totalCollected / trophy.requirement) * 100)}%` 
-                          }}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="ml-4">
-                      {isClaimed ? (
-                        <span className="px-3 py-1 bg-green-600 rounded-md text-sm">
-                          Claimed
-                        </span>
-                      ) : isUnlocked ? (
-                        <button
-                          onClick={() => claimTrophyReward(trophy.id)}
-                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-md text-sm"
-                        >
-                          Claim
-                        </button>
-                      ) : (
-                        <span className="px-3 py-1 bg-gray-700 rounded-md text-sm">
-                          Locked
-                        </span>
-                      )}
+                    <p className="text-xs text-gray-200 mb-2">{trophy.description}</p>
+                    <div className="h-1.5 w-full bg-gray-700 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-blue-500 transition-all duration-300"
+                        style={{ 
+                          width: `${Math.min(100, (totalCollected / trophy.requirement) * 100)}%` 
+                        }}
+                      />
                     </div>
                   </div>
+                  
+                  <div className="ml-2">
+                    {isClaimed ? (
+                      <span className="px-2 py-1 bg-green-600 rounded text-xs">
+                        ✓
+                      </span>
+                    ) : isUnlocked ? (
+                      <button
+                        onClick={() => claimTrophyReward(trophy.id)}
+                        className="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs"
+                      >
+                        Claim
+                      </button>
+                    ) : (
+                      <span className="px-2 py-1 bg-gray-700 rounded text-xs">
+                        🔒
+                      </span>
+                    )}
+                  </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
-      )}
-
-      <div 
-        ref={gameAreaRef}
-        className="bg-gray-800 border-2 border-gray-700 rounded-lg w-full h-[500px] relative overflow-hidden"
-      >
-        <div 
-          className={`absolute transition-transform duration-100 ease-out ${
-            activeSkin.pulse ? 'animate-pulse' : ''
-          }`}
-          style={{ 
-            left: `${cubePosition.x}px`, 
-            top: `${cubePosition.y}px`, 
-            width: `${cubeSize}px`, 
-            height: `${cubeSize}px`,
-            backgroundColor: activeSkin.color,
-            borderRadius: activeSkin.isRounded ? '4px' : '0',
-            transform: activeSkin.rotate ? 'rotate(45deg)' : 'none',
-            boxShadow: [
-              activeSkin.glow ? '0 0 10px rgba(255, 255, 255, 0.7)' : '',
-              activeSkin.shadow ? `0 0 15px ${activeSkin.shadowColor}` : '',
-              activeSkin.border ? `0 0 0 2px ${activeSkin.borderColor}` : ''
-            ].filter(Boolean).join(', '),
-          }}
-        />
-
-        {magnetRange > 0 && (
-          <div
-            className="absolute border-2 border-blue-500/30 rounded-full pointer-events-none"
-            style={{
-              left: `${cubePosition.x + cubeSize/2 - (cubeSize/2 + magnetRange)}px`,
-              top: `${cubePosition.y + cubeSize/2 - (cubeSize/2 + magnetRange)}px`,
-              width: `${cubeSize + magnetRange * 2}px`,
-              height: `${cubeSize + magnetRange * 2}px`,
-            }}
-          />
-        )}
-
-        {collectibles.map(collectible => (
-          <div 
-            key={collectible.id}
-            className="absolute bg-yellow-400 animate-pulse"
-            style={{ 
-              left: `${collectible.x}px`, 
-              top: `${collectible.y}px`, 
-              width: `${collectibleSize}px`, 
-              height: `${collectibleSize}px` 
-            }}
-          />
-        ))}
       </div>
 
-      <div className="mt-4 text-gray-400 text-sm">
-        <p>Move: {controls.upKey}/{controls.leftKey}/{controls.downKey}/{controls.rightKey} | Shop: {controls.shopKey} | Inventory: {controls.inventoryKey}</p>
+      {/* Main Game Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-4 px-4">
+          <div className="flex items-center gap-4">
+            <h2 className="text-2xl font-bold">Score: {score}</h2>
+            <span className="text-gray-400">Collected: {totalCollected}</span>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              className="bg-blue-600 hover:bg-blue-700 p-2 rounded-full transition-colors"
+              onClick={() => { onExit(); window.location.href = '#/shop'; }}
+            >
+              <ShoppingBag size={20} />
+            </button>
+            <button 
+              className="bg-green-600 hover:bg-green-700 p-2 rounded-full transition-colors"
+              onClick={() => { onExit(); window.location.href = '#/inventory'; }}
+            >
+              <Package size={20} />
+            </button>
+            <button 
+              className="bg-red-600 hover:bg-red-700 p-2 rounded-full transition-colors"
+              onClick={onExit}
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Game Area */}
+        <div 
+          ref={gameAreaRef}
+          className="bg-gray-800 border-2 border-gray-700 rounded-lg w-full h-[500px] relative overflow-hidden"
+        >
+          <div 
+            className={`absolute transition-transform duration-100 ease-out ${
+              activeSkin.pulse ? 'animate-pulse' : ''
+            }`}
+            style={{ 
+              left: `${cubePosition.x}px`, 
+              top: `${cubePosition.y}px`, 
+              width: `${cubeSize}px`, 
+              height: `${cubeSize}px`,
+              backgroundColor: activeSkin.color,
+              borderRadius: activeSkin.isRounded ? '4px' : '0',
+              transform: activeSkin.rotate ? 'rotate(45deg)' : 'none',
+              boxShadow: [
+                activeSkin.glow ? '0 0 10px rgba(255, 255, 255, 0.7)' : '',
+                activeSkin.shadow ? `0 0 15px ${activeSkin.shadowColor}` : '',
+                activeSkin.border ? `0 0 0 2px ${activeSkin.borderColor}` : ''
+              ].filter(Boolean).join(', '),
+            }}
+          />
+
+          {magnetRange > 0 && (
+            <div
+              className="absolute border-2 border-blue-500/30 rounded-full pointer-events-none"
+              style={{
+                left: `${cubePosition.x + cubeSize/2 - (cubeSize/2 + magnetRange)}px`,
+                top: `${cubePosition.y + cubeSize/2 - (cubeSize/2 + magnetRange)}px`,
+                width: `${cubeSize + magnetRange * 2}px`,
+                height: `${cubeSize + magnetRange * 2}px`,
+              }}
+            />
+          )}
+
+          {collectibles.map(collectible => (
+            <div 
+              key={collectible.id}
+              className="absolute bg-yellow-400 animate-pulse"
+              style={{ 
+                left: `${collectible.x}px`, 
+                top: `${collectible.y}px`, 
+                width: `${collectibleSize}px`, 
+                height: `${collectibleSize}px` 
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Controls Info */}
+        <div className="mt-4 text-gray-400 text-sm text-center">
+          <p>Move: {controls.upKey}/{controls.leftKey}/{controls.downKey}/{controls.rightKey} | Shop: {controls.shopKey} | Inventory: {controls.inventoryKey}</p>
+        </div>
       </div>
     </div>
   );
