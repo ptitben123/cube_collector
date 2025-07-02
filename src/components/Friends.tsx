@@ -1,4 +1,3 @@
-```tsx
 import React, { useState, useEffect } from 'react';
 import { useGameContext } from '../context/GameContext';
 import { ArrowLeft, Search, UserPlus, UserMinus, Check, X } from 'lucide-react';
@@ -191,7 +190,7 @@ const Friends: React.FC<FriendsProps> = ({ onBack }) => {
                   )}
                   <div>
                     <div>{friend.nickname}</div>
-                    <div className={\`text-sm ${
+                    <div className={`text-sm ${
                       friend.status === 'online' ? 'text-green-400' : 'text-gray-400'
                     }`}>
                       {friend.status === 'online' ? 'Online' : 'Offline'}
@@ -215,4 +214,3 @@ const Friends: React.FC<FriendsProps> = ({ onBack }) => {
 };
 
 export default Friends;
-```

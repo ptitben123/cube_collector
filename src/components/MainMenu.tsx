@@ -1,4 +1,3 @@
-```typescript
 import React from 'react';
 import { Square, Settings, User, Users } from 'lucide-react';
 import { useGameContext } from '../context/GameContext';
@@ -39,7 +38,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onSettings, onProfile, onFr
           {profilePicture ? (
             <div 
               className="w-6 h-6 rounded-full bg-cover bg-center"
-              style={{ backgroundImage: \`url(${profilePicture})` }}
+              style={{ backgroundImage: `url(${profilePicture})` }}
             />
           ) : (
             <User size={20} />
@@ -73,4 +72,3 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onSettings, onProfile, onFr
 };
 
 export default MainMenu;
-```

@@ -1,4 +1,3 @@
-```typescript
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -310,7 +309,7 @@ export const saveCustomSkin = async (userId: string, skin: {
         .from('unlocked_skins')
         .insert([{
           profile_id: userId,
-          skin_id: \`custom_${data.id}`
+          skin_id: `custom_${data.id}`
         }]);
     }
 
@@ -356,4 +355,3 @@ export const loadUserData = async (userId: string) => {
     return null;
   }
 };
-```
