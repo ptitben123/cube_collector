@@ -291,27 +291,6 @@ const upgradeDefinitions: Record<string, Upgrade> = {
     price: 300,
     maxLevel: 4,
     effect: (level) => 1 + level * 0.25
-  },
-  shield: {
-    name: 'Shield Duration',
-    description: 'Protection from obstacles',
-    price: 400,
-    maxLevel: 3,
-    effect: (level) => level * 2
-  },
-  chain: {
-    name: 'Chain Reaction',
-    description: 'Collect nearby items automatically',
-    price: 500,
-    maxLevel: 3,
-    effect: (level) => level * 15
-  },
-  vacuum: {
-    name: 'Vacuum Effect',
-    description: 'Pull collectibles towards you',
-    price: 600,
-    maxLevel: 3,
-    effect: (level) => level * 20
   }
 };
 

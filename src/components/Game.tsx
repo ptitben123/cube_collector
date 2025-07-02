@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useGameContext } from '../context/GameContext';
-import { ShoppingBag, Package, X, Trophy } from 'lucide-react';
+import { ShoppingBag, Package, X, Trophy, Gauge, Zap, Magnet, Clock, Gift, Target } from 'lucide-react';
 
 interface GameProps {
   onExit: () => void;
@@ -23,7 +23,9 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
     addCollected,
     trophies,
     claimedTrophies,
-    claimTrophyReward
+    claimTrophyReward,
+    upgradeLevel,
+    pointMultiplier
   } = useGameContext();
   
   const cubeSize = 30;
@@ -31,6 +33,9 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
   const speed = getUpgradeEffect('speed');
   const magnetRange = getUpgradeEffect('magnet');
   const spawnRateReduction = getUpgradeEffect('spawn');
+  const pointsMultiplier = getUpgradeEffect('points');
+  const bonusChance = getUpgradeEffect('bonus');
+  const comboMultiplier = getUpgradeEffect('combo');
   const keysPressed = useRef<{ [key: string]: boolean }>({});
 
   // Handle key presses
@@ -148,6 +153,30 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
       case 'diamond': return 'from-blue-400 to-cyan-300';
       case 'legendary': return 'from-purple-600 to-pink-500';
       default: return 'from-gray-700 to-gray-600';
+    }
+  };
+
+  const getParameterIcon = (param: string) => {
+    switch (param) {
+      case 'speed': return <Gauge size={16} className="text-blue-400" />;
+      case 'points': return <Zap size={16} className="text-yellow-400" />;
+      case 'magnet': return <Magnet size={16} className="text-purple-400" />;
+      case 'spawn': return <Clock size={16} className="text-green-400" />;
+      case 'bonus': return <Gift size={16} className="text-pink-400" />;
+      case 'combo': return <Target size={16} className="text-orange-400" />;
+      default: return null;
+    }
+  };
+
+  const formatParameterValue = (param: string, value: number) => {
+    switch (param) {
+      case 'speed': return `${value.toFixed(1)} px/frame`;
+      case 'points': return `${value.toFixed(1)}x`;
+      case 'magnet': return `${value.toFixed(0)} px`;
+      case 'spawn': return `${(value * 100).toFixed(0)}% faster`;
+      case 'bonus': return `${(value * 100).toFixed(0)}% chance`;
+      case 'combo': return `${value.toFixed(1)}x`;
+      default: return value.toString();
     }
   };
 
@@ -310,6 +339,119 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
         {/* Controls Info */}
         <div className="mt-4 text-gray-400 text-sm text-center">
           <p>Move: {controls.upKey}/{controls.leftKey}/{controls.downKey}/{controls.rightKey} | Shop: {controls.shopKey} | Inventory: {controls.inventoryKey}</p>
+        </div>
+      </div>
+
+      {/* Parameters Sidebar */}
+      <div className="w-80 bg-gray-800 rounded-lg p-4 h-[600px] overflow-y-auto">
+        <div className="flex items-center gap-2 mb-4">
+          <Gauge size={24} className="text-blue-500" />
+          <h3 className="text-lg font-semibold">Parameters</h3>
+        </div>
+        
+        <div className="space-y-4">
+          {/* Current Skin */}
+          <div className="p-3 bg-gray-700 rounded-lg">
+            <h4 className="text-sm font-medium mb-2 text-gray-300">Active Skin</h4>
+            <div className="flex items-center gap-3">
+              <div 
+                className={`w-8 h-8 ${activeSkin.pulse ? 'animate-pulse' : ''}`}
+                style={{ 
+                  backgroundColor: activeSkin.color,
+                  borderRadius: activeSkin.isRounded ? '2px' : '0',
+                  transform: activeSkin.rotate ? 'rotate(45deg)' : 'none',
+                  boxShadow: [
+                    activeSkin.glow ? '0 0 8px rgba(255, 255, 255, 0.7)' : '',
+                    activeSkin.shadow ? `0 0 10px ${activeSkin.shadowColor}` : '',
+                    activeSkin.border ? `0 0 0 1px ${activeSkin.borderColor}` : ''
+                  ].filter(Boolean).join(', ')
+                }}
+              />
+              <div>
+                <p className="text-sm font-medium">{activeSkin.name}</p>
+                <p className="text-xs text-gray-400">{activeSkin.description}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Global Multipliers */}
+          <div className="p-3 bg-gray-700 rounded-lg">
+            <h4 className="text-sm font-medium mb-2 text-gray-300">Global Effects</h4>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm flex items-center gap-2">
+                  <Zap size={14} className="text-yellow-400" />
+                  Point Multiplier
+                </span>
+                <span className="text-sm font-medium">{pointMultiplier.toFixed(1)}x</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Upgrade Effects */}
+          <div className="p-3 bg-gray-700 rounded-lg">
+            <h4 className="text-sm font-medium mb-3 text-gray-300">Upgrade Effects</h4>
+            <div className="space-y-3">
+              {Object.entries({
+                speed: speed,
+                points: pointsMultiplier,
+                magnet: magnetRange,
+                spawn: spawnRateReduction,
+                bonus: bonusChance,
+                combo: comboMultiplier
+              }).map(([param, value]) => {
+                const level = upgradeLevel[param] || 0;
+                return (
+                  <div key={param} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm flex items-center gap-2 capitalize">
+                        {getParameterIcon(param)}
+                        {param === 'points' ? 'Point Bonus' : param}
+                      </span>
+                      <span className="text-sm font-medium">
+                        {formatParameterValue(param, value)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-gray-400">
+                      <span>Level {level}</span>
+                      <span>{level > 0 ? 'Active' : 'Inactive'}</span>
+                    </div>
+                    <div className="h-1 w-full bg-gray-600 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-blue-500 transition-all duration-300"
+                        style={{ 
+                          width: `${level > 0 ? Math.min(100, (level / 10) * 100) : 0}%` 
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Game Stats */}
+          <div className="p-3 bg-gray-700 rounded-lg">
+            <h4 className="text-sm font-medium mb-2 text-gray-300">Game Stats</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Current Score</span>
+                <span className="font-medium">{score.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total Collected</span>
+                <span className="font-medium">{totalCollected.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Active Collectibles</span>
+                <span className="font-medium">{collectibles.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Trophies Claimed</span>
+                <span className="font-medium">{claimedTrophies.length}/{trophies.length}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
