@@ -1,4 +1,3 @@
-```typescript
 import React, { useState, useEffect } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase, initializeUserData } from './lib/supabase';
@@ -132,4 +131,3 @@ function App() {
 }
 
 export default App;
-```
