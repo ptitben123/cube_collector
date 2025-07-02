@@ -1,6 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Session } from '@supabase/supabase-js';
-import { supabase, saveUserData, saveUnlockedSkin, saveUpgrade, saveCustomSkin, saveControls, saveTrophy, saveFriendRequest, acceptFriendRequest as acceptFriendRequestDB, rejectFriendRequest as rejectFriendRequestDB, removeFriend as removeFriendDB } from '../lib/supabase';
 
 interface Skin {
   name: string;
@@ -52,14 +50,6 @@ interface Controls {
   inventoryKey: string;
 }
 
-interface Friend {
-  id: string;
-  nickname: string;
-  profilePicture?: string;
-  status: 'online' | 'offline';
-  lastSeen: Date;
-}
-
 interface GameContextType {
   score: number;
   addPoints: (amount: number) => void;
@@ -87,17 +77,10 @@ interface GameContextType {
   profilePicture: string;
   updateProfilePicture: (newPicture: string) => void;
   totalPointsGained: number;
-  friends: Friend[];
-  pendingFriends: Friend[];
-  addFriend: (friendId: string) => void;
-  removeFriend: (friendId: string) => void;
-  acceptFriendRequest: (friendId: string) => void;
-  rejectFriendRequest: (friendId: string) => void;
 }
 
 interface GameProviderProps {
   children: React.ReactNode;
-  session: Session | null;
 }
 
 const defaultControls: Controls = {
@@ -389,7 +372,7 @@ const trophyRoad: Trophy[] = [
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
-export const GameProvider: React.FC<GameProviderProps> = ({ children, session }) => {
+export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [score, setScore] = useState(0);
   const [unlockedSkins, setUnlockedSkins] = useState<string[]>(['default']);
   const [activeSkinId, setActiveSkinId] = useState('default');
@@ -399,168 +382,55 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children, session })
   const [claimedTrophies, setClaimedTrophies] = useState<string[]>([]);
   const [pointMultiplier, setPointMultiplier] = useState(1);
   const [customSkins, setCustomSkins] = useState<Record<string, Skin>>({});
-  const [nickname, setNickname] = useState('');
+  const [nickname, setNickname] = useState('Player');
   const [profilePicture, setProfilePicture] = useState('');
   const [totalPointsGained, setTotalPointsGained] = useState(0);
-  const [friends, setFriends] = useState<Friend[]>([]);
-  const [pendingFriends, setPendingFriends] = useState<Friend[]>([]);
 
   const allSkins = { ...defaultSkins, ...customSkins };
 
-  // Load user data when session changes
+  // Load data from localStorage on mount
   useEffect(() => {
-    const loadUserData = async () => {
-      if (!session?.user) return;
-
+    const savedData = localStorage.getItem('cubeCollectorData');
+    if (savedData) {
       try {
-        // Load profile data
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profile) {
-          setScore(profile.score || 0);
-          setNickname(profile.nickname || '');
-          setProfilePicture(profile.profile_picture || '');
-          setTotalCollected(profile.total_collected || 0);
-          setTotalPointsGained(profile.total_points_gained || 0);
-          setPointMultiplier(profile.point_multiplier || 1);
-        }
-
-        // Load unlocked skins
-        const { data: skins } = await supabase
-          .from('unlocked_skins')
-          .select('skin_id')
-          .eq('profile_id', session.user.id);
-
-        if (skins) {
-          const skinIds = skins.map(skin => skin.skin_id);
-          setUnlockedSkins(['default', ...skinIds]);
-        }
-
-        // Load custom skins
-        const { data: customSkinData } = await supabase
-          .from('custom_skins')
-          .select('*')
-          .eq('profile_id', session.user.id);
-
-        if (customSkinData) {
-          const customSkinsMap: Record<string, Skin> = {};
-          customSkinData.forEach(skin => {
-            customSkinsMap[`custom_${skin.id}`] = {
-              name: skin.name,
-              description: skin.description || '',
-              color: skin.color,
-              price: 0,
-              custom: true,
-              isRounded: skin.is_rounded,
-              rotate: skin.rotate,
-              glow: skin.glow,
-              pulse: skin.pulse,
-              border: skin.border,
-              borderColor: skin.border_color,
-              shadow: skin.shadow,
-              shadowColor: skin.shadow_color,
-              trail: skin.trail,
-              trailColor: skin.trail_color
-            };
-          });
-          setCustomSkins(customSkinsMap);
-        }
-
-        // Load upgrades
-        const { data: upgradeData } = await supabase
-          .from('upgrades')
-          .select('upgrade_id, level')
-          .eq('profile_id', session.user.id);
-
-        if (upgradeData) {
-          const upgradeLevels: Record<string, number> = {};
-          upgradeData.forEach(upgrade => {
-            upgradeLevels[upgrade.upgrade_id] = upgrade.level;
-          });
-          setUpgradeLevel(upgradeLevels);
-        }
-
-        // Load claimed trophies
-        const { data: trophyData } = await supabase
-          .from('claimed_trophies')
-          .select('trophy_id')
-          .eq('profile_id', session.user.id);
-
-        if (trophyData) {
-          setClaimedTrophies(trophyData.map(t => t.trophy_id));
-        }
-
-        // Load friends
-        const { data: friendsData } = await supabase
-          .from('friends')
-          .select(`
-            friend_id,
-            status,
-            profiles!friends_friend_id_fkey(nickname, profile_picture)
-          `)
-          .eq('profile_id', session.user.id);
-
-        if (friendsData) {
-          const friendsList: Friend[] = friendsData.map(friend => ({
-            id: friend.friend_id,
-            nickname: friend.profiles?.nickname || 'Unknown',
-            profilePicture: friend.profiles?.profile_picture || undefined,
-            status: friend.status as 'online' | 'offline',
-            lastSeen: new Date()
-          }));
-          setFriends(friendsList);
-        }
-
-        // Load pending friend requests
-        const { data: requestsData } = await supabase
-          .from('friend_requests')
-          .select(`
-            sender_id,
-            profiles!friend_requests_sender_id_fkey(nickname, profile_picture)
-          `)
-          .eq('receiver_id', session.user.id);
-
-        if (requestsData) {
-          const pendingList: Friend[] = requestsData.map(request => ({
-            id: request.sender_id,
-            nickname: request.profiles?.nickname || 'Unknown',
-            profilePicture: request.profiles?.profile_picture || undefined,
-            status: 'offline' as const,
-            lastSeen: new Date()
-          }));
-          setPendingFriends(pendingList);
-        }
-
+        const data = JSON.parse(savedData);
+        setScore(data.score || 0);
+        setUnlockedSkins(data.unlockedSkins || ['default']);
+        setActiveSkinId(data.activeSkinId || 'default');
+        setControls(data.controls || defaultControls);
+        setUpgradeLevel(data.upgradeLevel || {});
+        setTotalCollected(data.totalCollected || 0);
+        setClaimedTrophies(data.claimedTrophies || []);
+        setPointMultiplier(data.pointMultiplier || 1);
+        setCustomSkins(data.customSkins || {});
+        setNickname(data.nickname || 'Player');
+        setProfilePicture(data.profilePicture || '');
+        setTotalPointsGained(data.totalPointsGained || 0);
       } catch (error) {
-        console.error('Error loading user data:', error);
+        console.error('Error loading saved data:', error);
       }
-    };
+    }
+  }, []);
 
-    loadUserData();
-  }, [session]);
-
-  // Save user data when it changes
+  // Save data to localStorage whenever state changes
   useEffect(() => {
-    const saveData = async () => {
-      if (!session?.user) return;
-
-      await saveUserData(session.user.id, {
-        nickname,
-        profile_picture: profilePicture,
-        score,
-        total_collected: totalCollected,
-        total_points_gained: totalPointsGained,
-        point_multiplier: pointMultiplier
-      });
+    const dataToSave = {
+      score,
+      unlockedSkins,
+      activeSkinId,
+      controls,
+      upgradeLevel,
+      totalCollected,
+      claimedTrophies,
+      pointMultiplier,
+      customSkins,
+      nickname,
+      profilePicture,
+      totalPointsGained
     };
-
-    const debounceTimer = setTimeout(saveData, 1000);
-    return () => clearTimeout(debounceTimer);
-  }, [session, score, nickname, profilePicture, totalCollected, totalPointsGained, pointMultiplier]);
+    
+    localStorage.setItem('cubeCollectorData', JSON.stringify(dataToSave));
+  }, [score, unlockedSkins, activeSkinId, controls, upgradeLevel, totalCollected, claimedTrophies, pointMultiplier, customSkins, nickname, profilePicture, totalPointsGained]);
 
   const addPoints = (amount: number) => {
     const finalAmount = Math.floor(amount * pointMultiplier);
@@ -568,27 +438,22 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children, session })
     setTotalPointsGained(prev => prev + finalAmount);
   };
 
-  const spendPoints = async (amount: number, skinId: string) => {
-    if (!session?.user || score < amount) return;
+  const spendPoints = (amount: number, skinId: string) => {
+    if (score < amount) return;
     
     setScore(prev => prev - amount);
     setUnlockedSkins(prev => [...prev, skinId]);
-    await saveUnlockedSkin(session.user.id, skinId);
   };
 
   const setActiveSkin = (skinId: string) => {
     setActiveSkinId(skinId);
   };
 
-  const updateControls = async (newControls: Controls) => {
-    if (!session?.user) return;
+  const updateControls = (newControls: Controls) => {
     setControls(newControls);
-    await saveControls(session.user.id, newControls);
   };
 
-  const purchaseUpgrade = async (upgradeId: string) => {
-    if (!session?.user) return;
-    
+  const purchaseUpgrade = (upgradeId: string) => {
     const upgrade = upgradeDefinitions[upgradeId];
     const currentLevel = upgradeLevel[upgradeId] || 0;
     
@@ -596,7 +461,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children, session })
     
     setScore(prev => prev - upgrade.price);
     setUpgradeLevel(prev => ({ ...prev, [upgradeId]: currentLevel + 1 }));
-    await saveUpgrade(session.user.id, upgradeId, currentLevel + 1);
   };
 
   const getUpgradeEffect = (upgradeId: string): number => {
@@ -609,9 +473,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children, session })
     setTotalCollected(prev => prev + 1);
   };
 
-  const claimTrophyReward = async (trophyId: string) => {
-    if (!session?.user) return;
-    
+  const claimTrophyReward = (trophyId: string) => {
     const trophy = trophyRoad.find(t => t.id === trophyId);
     if (trophy && !claimedTrophies.includes(trophyId) && totalCollected >= trophy.requirement) {
       if (trophy.reward.type === 'points') {
@@ -619,12 +481,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children, session })
         setTotalPointsGained(prev => prev + (trophy.reward.value as number));
       } else if (trophy.reward.type === 'skin') {
         setUnlockedSkins(prev => [...prev, trophy.reward.value as string]);
-        await saveUnlockedSkin(session.user.id, trophy.reward.value as string);
       } else if (trophy.reward.type === 'multiplier') {
         setPointMultiplier(prev => prev * (trophy.reward.value as number));
       }
       setClaimedTrophies(prev => [...prev, trophyId]);
-      await saveTrophy(session.user.id, trophyId);
     }
   };
 
@@ -638,10 +498,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children, session })
     setPointMultiplier(1);
     setCustomSkins({});
     setTotalPointsGained(0);
+    setNickname('Player');
+    setProfilePicture('');
+    localStorage.removeItem('cubeCollectorData');
   };
 
-  const createCustomSkin = async (skinData: Partial<Skin>) => {
-    if (!session?.user || score < 30000) return;
+  const createCustomSkin = (skinData: Partial<Skin>) => {
+    if (score < 30000) return;
     
     setScore(prev => prev - 30000);
     
@@ -666,22 +529,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children, session })
     
     setCustomSkins(prev => ({ ...prev, [skinId]: newSkin }));
     setUnlockedSkins(prev => [...prev, skinId]);
-    
-    await saveCustomSkin(session.user.id, {
-      name: newSkin.name,
-      description: newSkin.description,
-      color: newSkin.color,
-      is_rounded: newSkin.isRounded,
-      rotate: newSkin.rotate,
-      glow: newSkin.glow,
-      pulse: newSkin.pulse,
-      border: newSkin.border,
-      border_color: newSkin.borderColor,
-      shadow: newSkin.shadow,
-      shadow_color: newSkin.shadowColor,
-      trail: newSkin.trail,
-      trail_color: newSkin.trailColor
-    });
   };
 
   const updateNickname = (newNickname: string) => {
@@ -690,55 +537,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children, session })
 
   const updateProfilePicture = (newPicture: string) => {
     setProfilePicture(newPicture);
-  };
-
-  const addFriend = async (friendId: string) => {
-    if (!session?.user) return;
-    
-    try {
-      await saveFriendRequest(session.user.id, friendId);
-    } catch (error) {
-      console.error('Error sending friend request:', error);
-    }
-  };
-
-  const removeFriend = async (friendId: string) => {
-    if (!session?.user) return;
-    
-    try {
-      await removeFriendDB(session.user.id, friendId);
-      setFriends(prev => prev.filter(f => f.id !== friendId));
-    } catch (error) {
-      console.error('Error removing friend:', error);
-    }
-  };
-
-  const acceptFriendRequest = async (friendId: string) => {
-    if (!session?.user) return;
-    
-    try {
-      await acceptFriendRequestDB(session.user.id, friendId);
-      
-      // Move from pending to friends
-      const pendingFriend = pendingFriends.find(f => f.id === friendId);
-      if (pendingFriend) {
-        setFriends(prev => [...prev, pendingFriend]);
-        setPendingFriends(prev => prev.filter(f => f.id !== friendId));
-      }
-    } catch (error) {
-      console.error('Error accepting friend request:', error);
-    }
-  };
-
-  const rejectFriendRequest = async (friendId: string) => {
-    if (!session?.user) return;
-    
-    try {
-      await rejectFriendRequestDB(session.user.id, friendId);
-      setPendingFriends(prev => prev.filter(f => f.id !== friendId));
-    } catch (error) {
-      console.error('Error rejecting friend request:', error);
-    }
   };
 
   const value: GameContextType = {
@@ -767,13 +565,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children, session })
     updateNickname,
     profilePicture,
     updateProfilePicture,
-    totalPointsGained,
-    friends,
-    pendingFriends,
-    addFriend,
-    removeFriend,
-    acceptFriendRequest,
-    rejectFriendRequest
+    totalPointsGained
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

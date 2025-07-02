@@ -1,15 +1,14 @@
 import React from 'react';
-import { Square, Settings, User, Users } from 'lucide-react';
+import { Square, Settings, User } from 'lucide-react';
 import { useGameContext } from '../context/GameContext';
 
 interface MainMenuProps {
   onPlay: () => void;
   onSettings: () => void;
   onProfile: () => void;
-  onFriends: () => void;
 }
 
-const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onSettings, onProfile, onFriends }) => {
+const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onSettings, onProfile }) => {
   const { nickname, profilePicture } = useGameContext();
 
   return (
@@ -44,14 +43,6 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onSettings, onProfile, onFr
             <User size={20} />
           )}
           {nickname || 'Profile'}
-        </button>
-        
-        <button 
-          onClick={onFriends}
-          className="w-full py-3 px-6 bg-green-600 hover:bg-green-700 rounded-lg text-white text-lg font-medium transition-colors flex items-center justify-center gap-2"
-        >
-          <Users size={20} />
-          Friends
         </button>
         
         <button 
