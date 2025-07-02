@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useGameContext } from '../context/GameContext';
-import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Save, RefreshCw, Download, Upload } from 'lucide-react';
 
 interface SettingsProps {
   onBack: () => void;
@@ -22,10 +22,20 @@ const defaultControls = {
 };
 
 const Settings: React.FC<SettingsProps> = ({ onBack }) => {
-  const { controls, updateControls, resetProgress } = useGameContext();
+  const { 
+    controls, 
+    updateControls, 
+    resetProgress, 
+    exportSave, 
+    importSave, 
+    lastSaved 
+  } = useGameContext();
+  
   const [activeBinding, setActiveBinding] = useState<string | null>(null);
   const [tempControls, setTempControls] = useState({ ...controls });
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [importStatus, setImportStatus] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const keyBindings: KeyBindingConfig[] = [
     { label: 'Move Up', key: 'upKey', description: 'Key to move the cube up' },
@@ -71,6 +81,37 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     }
   };
 
+  const handleExportSave = () => {
+    exportSave();
+    setImportStatus('Save file exported successfully!');
+    setTimeout(() => setImportStatus(''), 3000);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const success = await importSave(file);
+      if (success) {
+        setImportStatus('Save file imported successfully!');
+        setTimeout(() => {
+          setImportStatus('');
+          onBack();
+        }, 2000);
+      } else {
+        setImportStatus('Failed to import save file. Please check the file format.');
+        setTimeout(() => setImportStatus(''), 3000);
+      }
+    }
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div 
       className="w-full max-w-lg p-6 bg-gray-800 rounded-lg shadow-lg"
@@ -88,6 +129,54 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         <div className="w-10"></div>
       </div>
 
+      {/* Save/Load Section */}
+      <div className="mb-6 p-4 bg-gray-700 rounded-lg">
+        <h3 className="text-lg font-medium mb-3">Save Management</h3>
+        {lastSaved && (
+          <p className="text-sm text-gray-400 mb-3">
+            Last saved: {lastSaved}
+          </p>
+        )}
+        
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={handleExportSave}
+            className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded-md flex items-center justify-center gap-2"
+          >
+            <Download size={18} />
+            Export Save
+          </button>
+          <button
+            onClick={handleImportClick}
+            className="flex-1 py-2 bg-green-600 hover:bg-green-700 rounded-md flex items-center justify-center gap-2"
+          >
+            <Upload size={18} />
+            Import Save
+          </button>
+        </div>
+        
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleFileImport}
+          className="hidden"
+        />
+        
+        {importStatus && (
+          <p className={`text-sm text-center ${
+            importStatus.includes('Failed') ? 'text-red-400' : 'text-green-400'
+          }`}>
+            {importStatus}
+          </p>
+        )}
+        
+        <p className="text-xs text-gray-400 mt-2">
+          Export your save to backup your progress. Import to restore from a backup file.
+        </p>
+      </div>
+
+      {/* Controls Section */}
       <div className="space-y-4 mb-6">
         <h3 className="text-xl font-medium mb-4">Controls</h3>
         

@@ -50,6 +50,23 @@ interface Controls {
   inventoryKey: string;
 }
 
+interface SaveData {
+  score: number;
+  unlockedSkins: string[];
+  activeSkinId: string;
+  controls: Controls;
+  upgradeLevel: Record<string, number>;
+  totalCollected: number;
+  claimedTrophies: string[];
+  pointMultiplier: number;
+  customSkins: Record<string, Skin>;
+  nickname: string;
+  profilePicture: string;
+  totalPointsGained: number;
+  saveVersion: string;
+  lastSaved: string;
+}
+
 interface GameContextType {
   score: number;
   addPoints: (amount: number) => void;
@@ -77,6 +94,9 @@ interface GameContextType {
   profilePicture: string;
   updateProfilePicture: (newPicture: string) => void;
   totalPointsGained: number;
+  exportSave: () => void;
+  importSave: (file: File) => Promise<boolean>;
+  lastSaved: string;
 }
 
 interface GameProviderProps {
@@ -370,6 +390,9 @@ const trophyRoad: Trophy[] = [
   }
 ];
 
+const SAVE_VERSION = '1.0.0';
+const STORAGE_KEY = 'cubeCollectorData';
+
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
@@ -385,36 +408,59 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [nickname, setNickname] = useState('Player');
   const [profilePicture, setProfilePicture] = useState('');
   const [totalPointsGained, setTotalPointsGained] = useState(0);
+  const [lastSaved, setLastSaved] = useState('');
 
   const allSkins = { ...defaultSkins, ...customSkins };
 
   // Load data from localStorage on mount
   useEffect(() => {
-    const savedData = localStorage.getItem('cubeCollectorData');
-    if (savedData) {
+    const loadSavedData = () => {
       try {
-        const data = JSON.parse(savedData);
-        setScore(data.score || 0);
-        setUnlockedSkins(data.unlockedSkins || ['default']);
-        setActiveSkinId(data.activeSkinId || 'default');
-        setControls(data.controls || defaultControls);
-        setUpgradeLevel(data.upgradeLevel || {});
-        setTotalCollected(data.totalCollected || 0);
-        setClaimedTrophies(data.claimedTrophies || []);
-        setPointMultiplier(data.pointMultiplier || 1);
-        setCustomSkins(data.customSkins || {});
-        setNickname(data.nickname || 'Player');
-        setProfilePicture(data.profilePicture || '');
-        setTotalPointsGained(data.totalPointsGained || 0);
+        // Try localStorage first
+        const savedData = localStorage.getItem(STORAGE_KEY);
+        if (savedData) {
+          const data: SaveData = JSON.parse(savedData);
+          loadGameData(data);
+          return;
+        }
+
+        // Try sessionStorage as backup
+        const sessionData = sessionStorage.getItem(STORAGE_KEY);
+        if (sessionData) {
+          const data: SaveData = JSON.parse(sessionData);
+          loadGameData(data);
+          // Copy to localStorage
+          localStorage.setItem(STORAGE_KEY, sessionData);
+          return;
+        }
       } catch (error) {
         console.error('Error loading saved data:', error);
       }
-    }
+    };
+
+    loadSavedData();
   }, []);
 
-  // Save data to localStorage whenever state changes
+  const loadGameData = (data: SaveData) => {
+    setScore(data.score || 0);
+    setUnlockedSkins(data.unlockedSkins || ['default']);
+    setActiveSkinId(data.activeSkinId || 'default');
+    setControls(data.controls || defaultControls);
+    setUpgradeLevel(data.upgradeLevel || {});
+    setTotalCollected(data.totalCollected || 0);
+    setClaimedTrophies(data.claimedTrophies || []);
+    setPointMultiplier(data.pointMultiplier || 1);
+    setCustomSkins(data.customSkins || {});
+    setNickname(data.nickname || 'Player');
+    setProfilePicture(data.profilePicture || '');
+    setTotalPointsGained(data.totalPointsGained || 0);
+    setLastSaved(data.lastSaved || '');
+  };
+
+  // Save data to both localStorage and sessionStorage whenever state changes
   useEffect(() => {
-    const dataToSave = {
+    const now = new Date().toLocaleString();
+    const dataToSave: SaveData = {
       score,
       unlockedSkins,
       activeSkinId,
@@ -426,11 +472,85 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       customSkins,
       nickname,
       profilePicture,
-      totalPointsGained
+      totalPointsGained,
+      saveVersion: SAVE_VERSION,
+      lastSaved: now
     };
     
-    localStorage.setItem('cubeCollectorData', JSON.stringify(dataToSave));
+    const jsonData = JSON.stringify(dataToSave);
+    
+    try {
+      // Save to localStorage
+      localStorage.setItem(STORAGE_KEY, jsonData);
+      // Also save to sessionStorage as backup
+      sessionStorage.setItem(STORAGE_KEY, jsonData);
+      setLastSaved(now);
+    } catch (error) {
+      console.error('Error saving data:', error);
+      // If localStorage fails, try sessionStorage only
+      try {
+        sessionStorage.setItem(STORAGE_KEY, jsonData);
+      } catch (sessionError) {
+        console.error('Error saving to session storage:', sessionError);
+      }
+    }
   }, [score, unlockedSkins, activeSkinId, controls, upgradeLevel, totalCollected, claimedTrophies, pointMultiplier, customSkins, nickname, profilePicture, totalPointsGained]);
+
+  const exportSave = () => {
+    const dataToExport: SaveData = {
+      score,
+      unlockedSkins,
+      activeSkinId,
+      controls,
+      upgradeLevel,
+      totalCollected,
+      claimedTrophies,
+      pointMultiplier,
+      customSkins,
+      nickname,
+      profilePicture,
+      totalPointsGained,
+      saveVersion: SAVE_VERSION,
+      lastSaved: new Date().toLocaleString()
+    };
+
+    const jsonString = JSON.stringify(dataToExport, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cube-collector-save-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const importSave = async (file: File): Promise<boolean> => {
+    try {
+      const text = await file.text();
+      const data: SaveData = JSON.parse(text);
+      
+      // Validate the save file
+      if (!data.saveVersion || typeof data.score !== 'number') {
+        throw new Error('Invalid save file format');
+      }
+
+      // Load the data
+      loadGameData(data);
+      
+      // Save to storage
+      const jsonData = JSON.stringify(data);
+      localStorage.setItem(STORAGE_KEY, jsonData);
+      sessionStorage.setItem(STORAGE_KEY, jsonData);
+      
+      return true;
+    } catch (error) {
+      console.error('Error importing save file:', error);
+      return false;
+    }
+  };
 
   const addPoints = (amount: number) => {
     const finalAmount = Math.floor(amount * pointMultiplier);
@@ -500,7 +620,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     setTotalPointsGained(0);
     setNickname('Player');
     setProfilePicture('');
-    localStorage.removeItem('cubeCollectorData');
+    setLastSaved('');
+    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
   };
 
   const createCustomSkin = (skinData: Partial<Skin>) => {
@@ -565,7 +687,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     updateNickname,
     profilePicture,
     updateProfilePicture,
-    totalPointsGained
+    totalPointsGained,
+    exportSave,
+    importSave,
+    lastSaved
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
