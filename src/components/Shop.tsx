@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useGameContext } from '../context/GameContext';
-import { ArrowLeft, Zap, User, Square } from 'lucide-react';
+import { ArrowLeft, Zap, User, Square, Bot } from 'lucide-react';
 
 interface ShopProps {
   onBack: () => void;
@@ -18,10 +18,13 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
     getUpgradeEffect,
     collectibleSkins,
     unlockedCollectibleSkins,
-    purchaseCollectibleSkin
+    purchaseCollectibleSkin,
+    botSkins,
+    unlockedBotSkins,
+    purchaseBotSkin
   } = useGameContext();
 
-  const [activeTab, setActiveTab] = useState<'upgrades' | 'player' | 'collectibles'>('upgrades');
+  const [activeTab, setActiveTab] = useState<'upgrades' | 'player' | 'collectibles' | 'bots'>('upgrades');
 
   const handlePurchase = (skinId: string, price: number) => {
     if (score >= price) {
@@ -35,8 +38,14 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
     }
   };
 
-  const renderSkinPreview = (skin: any, isCollectible = false) => {
-    const size = isCollectible ? 'w-8 h-8' : 'w-12 h-12';
+  const handleBotPurchase = (skinId: string, price: number) => {
+    if (score >= price) {
+      purchaseBotSkin(skinId, price);
+    }
+  };
+
+  const renderSkinPreview = (skin: any, isCollectible = false, isBot = false) => {
+    const size = isCollectible ? 'w-8 h-8' : isBot ? 'w-10 h-10' : 'w-12 h-12';
     const baseStyle: React.CSSProperties = {
       backgroundColor: skin.color,
       boxShadow: [
@@ -56,13 +65,13 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
     } else if (skin.shape === 'triangle') {
       return (
         <div 
-          className={`${size} ${skin.pulse ? 'animate-pulse' : ''}`}
+          className={`${skin.pulse ? 'animate-pulse' : ''}`}
           style={{
             width: 0,
             height: 0,
-            borderLeft: isCollectible ? '16px solid transparent' : '24px solid transparent',
-            borderRight: isCollectible ? '16px solid transparent' : '24px solid transparent',
-            borderBottom: isCollectible ? `32px solid ${skin.color}` : `48px solid ${skin.color}`,
+            borderLeft: isCollectible ? '16px solid transparent' : isBot ? '20px solid transparent' : '24px solid transparent',
+            borderRight: isCollectible ? '16px solid transparent' : isBot ? '20px solid transparent' : '24px solid transparent',
+            borderBottom: isCollectible ? `32px solid ${skin.color}` : isBot ? `40px solid ${skin.color}` : `48px solid ${skin.color}`,
             backgroundColor: 'transparent',
             filter: skin.glow ? 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.7))' : 'none'
           }}
@@ -83,7 +92,11 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
       return (
         <div 
           className={`${size} ${skin.pulse ? 'animate-pulse' : ''} flex items-center justify-center`}
-          style={{ color: skin.color, filter: skin.glow ? 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.7))' : 'none' }}
+          style={{ 
+            color: skin.color, 
+            filter: skin.glow ? 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.7))' : 'none',
+            fontSize: isCollectible ? '16px' : isBot ? '20px' : '24px'
+          }}
         >
           ★
         </div>
@@ -103,13 +116,15 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
       // Default square/rectangle
       return (
         <div 
-          className={`${size} ${skin.pulse ? 'animate-pulse' : ''}`}
+          className={`${size} ${skin.pulse ? 'animate-pulse' : ''} ${isBot ? 'flex items-center justify-center' : ''}`}
           style={{
             ...baseStyle,
             borderRadius: skin.isRounded ? '4px' : '0',
             transform: skin.rotate ? 'rotate(45deg)' : 'none'
           }}
-        />
+        >
+          {isBot && <Bot size={isBot ? 12 : 16} className="text-gray-900" />}
+        </div>
       );
     }
   };
@@ -157,6 +172,15 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
         >
           <Square size={20} />
           Collectible Skins
+        </button>
+        <button
+          onClick={() => setActiveTab('bots')}
+          className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center gap-2 transition-colors ${
+            activeTab === 'bots' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'
+          }`}
+        >
+          <Bot size={20} />
+          Bot Skins
         </button>
       </div>
 
@@ -278,6 +302,48 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
                       ) : (
                         <button
                           onClick={() => handleCollectiblePurchase(id, skin.price)}
+                          disabled={score < skin.price}
+                          className={`px-3 py-1 rounded-md text-sm ${
+                            score >= skin.price 
+                              ? 'bg-blue-600 hover:bg-blue-700' 
+                              : 'bg-gray-600 cursor-not-allowed'
+                          }`}
+                        >
+                          {skin.price} pts
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'bots' && (
+          <div>
+            <h3 className="text-xl font-semibold mb-4">Bot Skins</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {Object.entries(botSkins || {})
+                .filter(([id]) => id !== 'default')
+                .map(([id, skin]) => {
+                  const isUnlocked = unlockedBotSkins?.includes(id);
+                  
+                  return (
+                    <div 
+                      key={id}
+                      className="p-4 bg-gray-700 rounded-lg flex flex-col items-center"
+                    >
+                      <div className="mb-3 flex items-center justify-center h-14">
+                        {renderSkinPreview(skin, false, true)}
+                      </div>
+                      <h4 className="text-md font-medium text-center mb-1">{skin.name}</h4>
+                      <p className="text-gray-400 text-xs text-center mb-3">{skin.description}</p>
+                      
+                      {isUnlocked ? (
+                        <span className="px-3 py-1 bg-green-700 rounded-md text-sm">Purchased</span>
+                      ) : (
+                        <button
+                          onClick={() => handleBotPurchase(id, skin.price)}
                           disabled={score < skin.price}
                           className={`px-3 py-1 rounded-md text-sm ${
                             score >= skin.price 

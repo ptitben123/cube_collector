@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useGameContext } from '../context/GameContext';
-import { ArrowLeft, Check, Plus, X } from 'lucide-react';
+import { ArrowLeft, Check, Plus, X, Bot } from 'lucide-react';
 
 interface InventoryProps {
   onBack: () => void;
@@ -51,10 +51,14 @@ const Inventory: React.FC<InventoryProps> = ({ onBack }) => {
     collectibleSkins,
     unlockedCollectibleSkins,
     activeCollectibleSkin,
-    setActiveCollectibleSkin
+    setActiveCollectibleSkin,
+    botSkins,
+    unlockedBotSkins,
+    activeBotSkin,
+    setActiveBotSkin
   } = useGameContext();
   
-  const [activeTab, setActiveTab] = useState<'player' | 'collectibles'>('player');
+  const [activeTab, setActiveTab] = useState<'player' | 'collectibles' | 'bots'>('player');
   const [showCustomizer, setShowCustomizer] = useState(false);
   const [customSkin, setCustomSkin] = useState<CustomSkinForm>(defaultCustomSkin);
   const [previewKey, setPreviewKey] = useState(0);
@@ -72,8 +76,8 @@ const Inventory: React.FC<InventoryProps> = ({ onBack }) => {
     setPreviewKey(prev => prev + 1);
   };
 
-  const renderSkinPreview = (skin: any, isCollectible = false) => {
-    const size = isCollectible ? 'w-8 h-8' : 'w-12 h-12';
+  const renderSkinPreview = (skin: any, isCollectible = false, isBot = false) => {
+    const size = isCollectible ? 'w-8 h-8' : isBot ? 'w-10 h-10' : 'w-12 h-12';
     const baseStyle: React.CSSProperties = {
       backgroundColor: skin.color,
       boxShadow: [
@@ -97,9 +101,9 @@ const Inventory: React.FC<InventoryProps> = ({ onBack }) => {
           style={{
             width: 0,
             height: 0,
-            borderLeft: isCollectible ? '16px solid transparent' : '24px solid transparent',
-            borderRight: isCollectible ? '16px solid transparent' : '24px solid transparent',
-            borderBottom: isCollectible ? `32px solid ${skin.color}` : `48px solid ${skin.color}`,
+            borderLeft: isCollectible ? '16px solid transparent' : isBot ? '20px solid transparent' : '24px solid transparent',
+            borderRight: isCollectible ? '16px solid transparent' : isBot ? '20px solid transparent' : '24px solid transparent',
+            borderBottom: isCollectible ? `32px solid ${skin.color}` : isBot ? `40px solid ${skin.color}` : `48px solid ${skin.color}`,
             backgroundColor: 'transparent',
             filter: skin.glow ? 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.7))' : 'none'
           }}
@@ -120,7 +124,11 @@ const Inventory: React.FC<InventoryProps> = ({ onBack }) => {
       return (
         <div 
           className={`${size} ${skin.pulse ? 'animate-pulse' : ''} flex items-center justify-center text-xl font-bold`}
-          style={{ color: skin.color, filter: skin.glow ? 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.7))' : 'none' }}
+          style={{ 
+            color: skin.color, 
+            filter: skin.glow ? 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.7))' : 'none',
+            fontSize: isCollectible ? '16px' : isBot ? '20px' : '24px'
+          }}
         >
           ★
         </div>
@@ -140,13 +148,15 @@ const Inventory: React.FC<InventoryProps> = ({ onBack }) => {
       // Default square/rectangle
       return (
         <div 
-          className={`${size} ${skin.pulse ? 'animate-pulse' : ''}`}
+          className={`${size} ${skin.pulse ? 'animate-pulse' : ''} ${isBot ? 'flex items-center justify-center' : ''}`}
           style={{
             ...baseStyle,
             borderRadius: skin.isRounded ? '4px' : '0',
             transform: skin.rotate ? 'rotate(45deg)' : 'none'
           }}
-        />
+        >
+          {isBot && <Bot size={isBot ? 12 : 16} className="text-gray-900" />}
+        </div>
       );
     }
   };
@@ -196,6 +206,14 @@ const Inventory: React.FC<InventoryProps> = ({ onBack }) => {
           }`}
         >
           Collectible Skins
+        </button>
+        <button
+          onClick={() => setActiveTab('bots')}
+          className={`flex-1 py-2 px-4 rounded-md transition-colors ${
+            activeTab === 'bots' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'
+          }`}
+        >
+          Bot Skins
         </button>
       </div>
 
@@ -422,7 +440,7 @@ const Inventory: React.FC<InventoryProps> = ({ onBack }) => {
                   </div>
                 );
               })
-          ) : (
+          ) : activeTab === 'collectibles' ? (
             Object.entries(collectibleSkins)
               .filter(([id]) => unlockedCollectibleSkins.includes(id))
               .map(([id, skin]) => {
@@ -459,10 +477,48 @@ const Inventory: React.FC<InventoryProps> = ({ onBack }) => {
                   </div>
                 );
               })
+          ) : (
+            Object.entries(botSkins)
+              .filter(([id]) => unlockedBotSkins.includes(id))
+              .map(([id, skin]) => {
+                const isActive = activeBotSkin.name === skin.name;
+                
+                return (
+                  <div 
+                    key={id}
+                    className={`p-4 rounded-lg flex flex-col items-center ${
+                      isActive ? 'bg-blue-800 border border-blue-500' : 'bg-gray-700'
+                    }`}
+                  >
+                    <div className="mb-3 flex items-center justify-center h-14">
+                      {renderSkinPreview(skin, false, true)}
+                    </div>
+                    
+                    <div className="text-center mb-3">
+                      <h3 className="text-lg font-medium">{skin.name}</h3>
+                      <p className="text-gray-400 text-sm">{skin.description}</p>
+                    </div>
+                    
+                    {isActive ? (
+                      <div className="bg-green-600 p-2 rounded-full">
+                        <Check size={20} />
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setActiveBotSkin(id)}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md"
+                      >
+                        Equip
+                      </button>
+                    )}
+                  </div>
+                );
+              })
           )}
 
           {((activeTab === 'player' && unlockedSkins.length <= 1) || 
-            (activeTab === 'collectibles' && unlockedCollectibleSkins.length <= 1)) && (
+            (activeTab === 'collectibles' && unlockedCollectibleSkins.length <= 1) ||
+            (activeTab === 'bots' && unlockedBotSkins.length <= 1)) && (
             <div className="col-span-full text-center p-4 bg-gray-700 rounded-lg">
               <p>Your inventory is empty! Visit the shop to buy some skins.</p>
             </div>

@@ -36,6 +36,20 @@ interface CollectibleSkin {
   shadowColor?: string;
 }
 
+interface BotSkin {
+  name: string;
+  description: string;
+  color: string;
+  price: number;
+  glow?: boolean;
+  pulse?: boolean;
+  border?: boolean;
+  borderColor?: string;
+  shadow?: boolean;
+  shadowColor?: string;
+  shape?: 'square' | 'circle' | 'triangle' | 'diamond' | 'star' | 'hexagon';
+}
+
 interface Upgrade {
   name: string;
   description: string;
@@ -83,6 +97,8 @@ interface SaveData {
   unlockedCollectibleSkins: string[];
   activeCollectibleSkinId: string;
   botCount: number;
+  unlockedBotSkins: string[];
+  activeBotSkinId: string;
 }
 
 interface GameContextType {
@@ -122,6 +138,11 @@ interface GameContextType {
   purchaseCollectibleSkin: (skinId: string, price: number) => void;
   botCount: number;
   purchaseBot: () => void;
+  botSkins: Record<string, BotSkin>;
+  unlockedBotSkins: string[];
+  activeBotSkin: BotSkin;
+  setActiveBotSkin: (skinId: string) => void;
+  purchaseBotSkin: (skinId: string, price: number) => void;
 }
 
 interface GameProviderProps {
@@ -448,6 +469,304 @@ const defaultCollectibleSkins: Record<string, CollectibleSkin> = {
     shape: 'circle',
     glow: true,
     pulse: true
+  },
+  // New collectible skins
+  emerald_square: {
+    name: 'Emerald Square',
+    description: 'A precious emerald square',
+    color: '#10b981',
+    price: 180,
+    shape: 'square',
+    glow: true
+  },
+  ruby_circle: {
+    name: 'Ruby Circle',
+    description: 'A brilliant ruby circle',
+    color: '#dc2626',
+    price: 220,
+    shape: 'circle',
+    glow: true,
+    pulse: true
+  },
+  sapphire_diamond: {
+    name: 'Sapphire Diamond',
+    description: 'A stunning sapphire diamond',
+    color: '#1d4ed8',
+    price: 280,
+    shape: 'diamond',
+    glow: true
+  },
+  amethyst_triangle: {
+    name: 'Amethyst Triangle',
+    description: 'A mystical amethyst triangle',
+    color: '#7c3aed',
+    price: 240,
+    shape: 'triangle',
+    glow: true,
+    pulse: true
+  },
+  topaz_hex: {
+    name: 'Topaz Hexagon',
+    description: 'A golden topaz hexagon',
+    color: '#f59e0b',
+    price: 320,
+    shape: 'hexagon',
+    glow: true
+  },
+  platinum_star: {
+    name: 'Platinum Star',
+    description: 'A rare platinum star',
+    color: '#e5e7eb',
+    price: 400,
+    shape: 'star',
+    glow: true,
+    border: true,
+    borderColor: '#9ca3af'
+  },
+  neon_pink_circle: {
+    name: 'Neon Pink Orb',
+    description: 'A vibrant neon pink orb',
+    color: '#ec4899',
+    price: 160,
+    shape: 'circle',
+    glow: true,
+    pulse: true
+  },
+  electric_blue_square: {
+    name: 'Electric Blue Square',
+    description: 'An electric blue square',
+    color: '#0ea5e9',
+    price: 140,
+    shape: 'square',
+    glow: true
+  },
+  lime_triangle: {
+    name: 'Lime Triangle',
+    description: 'A bright lime triangle',
+    color: '#84cc16',
+    price: 130,
+    shape: 'triangle',
+    glow: true
+  },
+  magenta_diamond: {
+    name: 'Magenta Diamond',
+    description: 'A vibrant magenta diamond',
+    color: '#d946ef',
+    price: 260,
+    shape: 'diamond',
+    pulse: true
+  },
+  turquoise_hex: {
+    name: 'Turquoise Hexagon',
+    description: 'A beautiful turquoise hexagon',
+    color: '#06b6d4',
+    price: 290,
+    shape: 'hexagon',
+    glow: true
+  },
+  coral_star: {
+    name: 'Coral Star',
+    description: 'A warm coral star',
+    color: '#f97316',
+    price: 270,
+    shape: 'star',
+    glow: true
+  },
+  obsidian_square: {
+    name: 'Obsidian Square',
+    description: 'A dark obsidian square',
+    color: '#1f2937',
+    price: 350,
+    shape: 'square',
+    border: true,
+    borderColor: '#6b7280',
+    shadow: true,
+    shadowColor: '#000000'
+  },
+  crystal_circle: {
+    name: 'Crystal Orb',
+    description: 'A transparent crystal orb',
+    color: '#f3f4f6',
+    price: 380,
+    shape: 'circle',
+    glow: true,
+    pulse: true,
+    border: true,
+    borderColor: '#d1d5db'
+  },
+  void_triangle: {
+    name: 'Void Triangle',
+    description: 'A mysterious void triangle',
+    color: '#000000',
+    price: 420,
+    shape: 'triangle',
+    border: true,
+    borderColor: '#8b5cf6',
+    glow: true
+  }
+};
+
+const defaultBotSkins: Record<string, BotSkin> = {
+  default: {
+    name: 'Standard Bot',
+    description: 'Basic green collection bot',
+    color: '#22c55e',
+    price: 0,
+    shape: 'square'
+  },
+  blue_bot: {
+    name: 'Blue Bot',
+    description: 'A cool blue collection bot',
+    color: '#3b82f6',
+    price: 200,
+    shape: 'square'
+  },
+  red_bot: {
+    name: 'Red Bot',
+    description: 'A fiery red collection bot',
+    color: '#ef4444',
+    price: 250,
+    shape: 'square',
+    glow: true
+  },
+  purple_bot: {
+    name: 'Purple Bot',
+    description: 'A mystical purple bot',
+    color: '#a855f7',
+    price: 300,
+    shape: 'square',
+    pulse: true
+  },
+  gold_bot: {
+    name: 'Golden Bot',
+    description: 'A precious golden bot',
+    color: '#fbbf24',
+    price: 500,
+    shape: 'square',
+    glow: true,
+    pulse: true
+  },
+  stealth_bot: {
+    name: 'Stealth Bot',
+    description: 'A dark stealth bot',
+    color: '#1f2937',
+    price: 400,
+    shape: 'square',
+    border: true,
+    borderColor: '#6b7280'
+  },
+  neon_bot: {
+    name: 'Neon Bot',
+    description: 'A bright neon bot',
+    color: '#00ff88',
+    price: 600,
+    shape: 'square',
+    glow: true,
+    pulse: true
+  },
+  crystal_bot: {
+    name: 'Crystal Bot',
+    description: 'A transparent crystal bot',
+    color: '#f3f4f6',
+    price: 700,
+    shape: 'square',
+    glow: true,
+    border: true,
+    borderColor: '#d1d5db'
+  },
+  // Different shapes for bots
+  circle_bot: {
+    name: 'Orb Bot',
+    description: 'A spherical collection bot',
+    color: '#06b6d4',
+    price: 350,
+    shape: 'circle',
+    glow: true
+  },
+  triangle_bot: {
+    name: 'Arrow Bot',
+    description: 'A triangular speed bot',
+    color: '#f97316',
+    price: 380,
+    shape: 'triangle',
+    glow: true
+  },
+  diamond_bot: {
+    name: 'Diamond Bot',
+    description: 'A diamond-shaped precision bot',
+    color: '#e5e7eb',
+    price: 450,
+    shape: 'diamond',
+    glow: true,
+    pulse: true
+  },
+  star_bot: {
+    name: 'Star Bot',
+    description: 'A star-shaped elite bot',
+    color: '#fbbf24',
+    price: 550,
+    shape: 'star',
+    glow: true,
+    pulse: true
+  },
+  hex_bot: {
+    name: 'Hex Bot',
+    description: 'A hexagonal tactical bot',
+    color: '#8b5cf6',
+    price: 480,
+    shape: 'hexagon',
+    glow: true
+  },
+  // Premium bot skins
+  rainbow_bot: {
+    name: 'Rainbow Bot',
+    description: 'A colorful rainbow bot',
+    color: '#ff6b6b',
+    price: 800,
+    shape: 'square',
+    glow: true,
+    pulse: true
+  },
+  plasma_bot: {
+    name: 'Plasma Bot',
+    description: 'An energetic plasma bot',
+    color: '#ff00ff',
+    price: 900,
+    shape: 'square',
+    glow: true,
+    pulse: true,
+    border: true,
+    borderColor: '#c084fc'
+  },
+  void_bot: {
+    name: 'Void Bot',
+    description: 'A mysterious void bot',
+    color: '#000000',
+    price: 750,
+    shape: 'square',
+    border: true,
+    borderColor: '#8b5cf6',
+    glow: true
+  },
+  fire_bot: {
+    name: 'Fire Bot',
+    description: 'A blazing fire bot',
+    color: '#ff4500',
+    price: 650,
+    shape: 'square',
+    glow: true,
+    shadow: true,
+    shadowColor: '#ff6b35'
+  },
+  ice_bot: {
+    name: 'Ice Bot',
+    description: 'A frozen ice bot',
+    color: '#87ceeb',
+    price: 580,
+    shape: 'square',
+    glow: true,
+    border: true,
+    borderColor: '#bfdbfe'
   }
 };
 
@@ -571,7 +890,7 @@ const trophyRoad: Trophy[] = [
   }
 ];
 
-const SAVE_VERSION = '1.2.0';
+const SAVE_VERSION = '1.3.0';
 const STORAGE_KEY = 'cubeCollectorData';
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -593,6 +912,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [unlockedCollectibleSkins, setUnlockedCollectibleSkins] = useState<string[]>(['default']);
   const [activeCollectibleSkinId, setActiveCollectibleSkinId] = useState('default');
   const [botCount, setBotCount] = useState(0);
+  const [unlockedBotSkins, setUnlockedBotSkins] = useState<string[]>(['default']);
+  const [activeBotSkinId, setActiveBotSkinId] = useState('default');
 
   const allSkins = { ...defaultSkins, ...customSkins };
 
@@ -642,6 +963,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     setUnlockedCollectibleSkins(data.unlockedCollectibleSkins || ['default']);
     setActiveCollectibleSkinId(data.activeCollectibleSkinId || 'default');
     setBotCount(data.botCount || 0);
+    setUnlockedBotSkins(data.unlockedBotSkins || ['default']);
+    setActiveBotSkinId(data.activeBotSkinId || 'default');
   };
 
   // Save data to both localStorage and sessionStorage whenever state changes
@@ -664,7 +987,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       lastSaved: now,
       unlockedCollectibleSkins,
       activeCollectibleSkinId,
-      botCount
+      botCount,
+      unlockedBotSkins,
+      activeBotSkinId
     };
     
     const jsonData = JSON.stringify(dataToSave);
@@ -684,7 +1009,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         console.error('Error saving to session storage:', sessionError);
       }
     }
-  }, [score, unlockedSkins, activeSkinId, controls, upgradeLevel, totalCollected, claimedTrophies, pointMultiplier, customSkins, nickname, profilePicture, totalPointsGained, unlockedCollectibleSkins, activeCollectibleSkinId, botCount]);
+  }, [score, unlockedSkins, activeSkinId, controls, upgradeLevel, totalCollected, claimedTrophies, pointMultiplier, customSkins, nickname, profilePicture, totalPointsGained, unlockedCollectibleSkins, activeCollectibleSkinId, botCount, unlockedBotSkins, activeBotSkinId]);
 
   const exportSave = () => {
     const dataToExport: SaveData = {
@@ -704,7 +1029,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       lastSaved: new Date().toLocaleString(),
       unlockedCollectibleSkins,
       activeCollectibleSkinId,
-      botCount
+      botCount,
+      unlockedBotSkins,
+      activeBotSkinId
     };
 
     const jsonString = JSON.stringify(dataToExport, null, 2);
@@ -768,11 +1095,22 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     setActiveCollectibleSkinId(skinId);
   };
 
+  const setActiveBotSkin = (skinId: string) => {
+    setActiveBotSkinId(skinId);
+  };
+
   const purchaseCollectibleSkin = (skinId: string, price: number) => {
     if (score < price) return;
     
     setScore(prev => prev - price);
     setUnlockedCollectibleSkins(prev => [...prev, skinId]);
+  };
+
+  const purchaseBotSkin = (skinId: string, price: number) => {
+    if (score < price) return;
+    
+    setScore(prev => prev - price);
+    setUnlockedBotSkins(prev => [...prev, skinId]);
   };
 
   const purchaseBot = () => {
@@ -834,6 +1172,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     setUnlockedCollectibleSkins(['default']);
     setActiveCollectibleSkinId('default');
     setBotCount(0);
+    setUnlockedBotSkins(['default']);
+    setActiveBotSkinId('default');
     localStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(STORAGE_KEY);
   };
@@ -911,7 +1251,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     setActiveCollectibleSkin,
     purchaseCollectibleSkin,
     botCount,
-    purchaseBot
+    purchaseBot,
+    botSkins: defaultBotSkins,
+    unlockedBotSkins,
+    activeBotSkin: defaultBotSkins[activeBotSkinId] || defaultBotSkins.default,
+    setActiveBotSkin,
+    purchaseBotSkin
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

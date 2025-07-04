@@ -39,7 +39,8 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
     activeCollectibleSkin,
     botCount,
     purchaseBot,
-    spendPoints
+    spendPoints,
+    activeBotSkin
   } = useGameContext();
   
   const cubeSize = 30;
@@ -492,51 +493,246 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
     // Add visual indicator if bot has a target
     const hasTarget = bot.targetId !== null && collectibles.find(c => c.id === bot.targetId);
     
-    return (
-      <div
-        key={bot.id}
-        className="absolute bg-green-500 rounded-sm border border-green-400"
-        style={{
-          left: `${bot.x}px`,
-          top: `${bot.y}px`,
-          width: `${botSize}px`,
-          height: `${botSize}px`,
-          boxShadow: hasTarget 
-            ? '0 0 8px rgba(34, 197, 94, 0.8)' 
-            : '0 0 5px rgba(34, 197, 94, 0.5)',
-          border: hasTarget 
-            ? '2px solid #22c55e' 
-            : '1px solid #4ade80'
-        }}
-      >
-        <div className="w-full h-full flex items-center justify-center">
-          <Bot size={12} className="text-green-900" />
-        </div>
-        
-        {/* Target line indicator */}
-        {hasTarget && (
+    const baseStyle: React.CSSProperties = {
+      left: `${bot.x}px`,
+      top: `${bot.y}px`,
+      width: `${botSize}px`,
+      height: `${botSize}px`,
+      backgroundColor: activeBotSkin.color,
+      boxShadow: [
+        activeBotSkin.glow || hasTarget ? '0 0 8px rgba(34, 197, 94, 0.8)' : '0 0 5px rgba(34, 197, 94, 0.5)',
+        activeBotSkin.shadow ? `0 0 15px ${activeBotSkin.shadowColor}` : '',
+        activeBotSkin.border || hasTarget ? `2px solid ${activeBotSkin.borderColor || '#22c55e'}` : '1px solid #4ade80'
+      ].filter(Boolean).join(', ')
+    };
+
+    const className = `absolute ${activeBotSkin.pulse ? 'animate-pulse' : ''}`;
+
+    if (activeBotSkin.shape === 'circle') {
+      return (
+        <div key={bot.id}>
           <div
-            className="absolute w-0.5 bg-green-400 opacity-50"
+            className={`${className} rounded-full flex items-center justify-center`}
+            style={baseStyle}
+          >
+            <Bot size={12} className="text-gray-900" />
+          </div>
+          
+          {/* Target line indicator */}
+          {hasTarget && (
+            <div
+              className="absolute w-0.5 bg-green-400 opacity-50"
+              style={{
+                left: `${bot.x + botSize/2}px`,
+                top: `${bot.y + botSize/2}px`,
+                transformOrigin: 'top',
+                transform: (() => {
+                  const target = collectibles.find(c => c.id === bot.targetId);
+                  if (target) {
+                    const dx = target.x - bot.x;
+                    const dy = target.y - bot.y;
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    return `rotate(${angle}deg) scaleY(${Math.min(length / 2, 50)})`;
+                  }
+                  return 'scaleY(0)';
+                })()
+              }}
+            />
+          )}
+        </div>
+      );
+    } else if (activeBotSkin.shape === 'triangle') {
+      return (
+        <div key={bot.id}>
+          <div
+            className={className}
             style={{
-              left: `${botSize/2}px`,
-              top: `${botSize/2}px`,
-              transformOrigin: 'top',
-              transform: (() => {
-                const target = collectibles.find(c => c.id === bot.targetId);
-                if (target) {
-                  const dx = target.x - bot.x;
-                  const dy = target.y - bot.y;
-                  const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
-                  const length = Math.sqrt(dx * dx + dy * dy);
-                  return `rotate(${angle}deg) scaleY(${Math.min(length / 2, 50)})`;
-                }
-                return 'scaleY(0)';
-              })()
+              left: `${bot.x}px`,
+              top: `${bot.y}px`,
+              width: 0,
+              height: 0,
+              borderLeft: `${botSize/2}px solid transparent`,
+              borderRight: `${botSize/2}px solid transparent`,
+              borderBottom: `${botSize}px solid ${activeBotSkin.color}`,
+              filter: activeBotSkin.glow || hasTarget ? 'drop-shadow(0 0 8px rgba(34, 197, 94, 0.8))' : 'none'
             }}
           />
-        )}
-      </div>
-    );
+          
+          {/* Target line indicator */}
+          {hasTarget && (
+            <div
+              className="absolute w-0.5 bg-green-400 opacity-50"
+              style={{
+                left: `${bot.x + botSize/2}px`,
+                top: `${bot.y + botSize/2}px`,
+                transformOrigin: 'top',
+                transform: (() => {
+                  const target = collectibles.find(c => c.id === bot.targetId);
+                  if (target) {
+                    const dx = target.x - bot.x;
+                    const dy = target.y - bot.y;
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    return `rotate(${angle}deg) scaleY(${Math.min(length / 2, 50)})`;
+                  }
+                  return 'scaleY(0)';
+                })()
+              }}
+            />
+          )}
+        </div>
+      );
+    } else if (activeBotSkin.shape === 'diamond') {
+      return (
+        <div key={bot.id}>
+          <div
+            className={`${className} flex items-center justify-center`}
+            style={{
+              ...baseStyle,
+              transform: 'rotate(45deg)'
+            }}
+          >
+            <Bot size={12} className="text-gray-900" style={{ transform: 'rotate(-45deg)' }} />
+          </div>
+          
+          {/* Target line indicator */}
+          {hasTarget && (
+            <div
+              className="absolute w-0.5 bg-green-400 opacity-50"
+              style={{
+                left: `${bot.x + botSize/2}px`,
+                top: `${bot.y + botSize/2}px`,
+                transformOrigin: 'top',
+                transform: (() => {
+                  const target = collectibles.find(c => c.id === bot.targetId);
+                  if (target) {
+                    const dx = target.x - bot.x;
+                    const dy = target.y - bot.y;
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    return `rotate(${angle}deg) scaleY(${Math.min(length / 2, 50)})`;
+                  }
+                  return 'scaleY(0)';
+                })()
+              }}
+            />
+          )}
+        </div>
+      );
+    } else if (activeBotSkin.shape === 'star') {
+      return (
+        <div key={bot.id}>
+          <div
+            className={`${className} flex items-center justify-center text-lg font-bold`}
+            style={{
+              ...baseStyle,
+              color: activeBotSkin.color,
+              backgroundColor: 'transparent',
+              filter: activeBotSkin.glow || hasTarget ? 'drop-shadow(0 0 8px rgba(34, 197, 94, 0.8))' : 'none'
+            }}
+          >
+            ★
+          </div>
+          
+          {/* Target line indicator */}
+          {hasTarget && (
+            <div
+              className="absolute w-0.5 bg-green-400 opacity-50"
+              style={{
+                left: `${bot.x + botSize/2}px`,
+                top: `${bot.y + botSize/2}px`,
+                transformOrigin: 'top',
+                transform: (() => {
+                  const target = collectibles.find(c => c.id === bot.targetId);
+                  if (target) {
+                    const dx = target.x - bot.x;
+                    const dy = target.y - bot.y;
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    return `rotate(${angle}deg) scaleY(${Math.min(length / 2, 50)})`;
+                  }
+                  return 'scaleY(0)';
+                })()
+              }}
+            />
+          )}
+        </div>
+      );
+    } else if (activeBotSkin.shape === 'hexagon') {
+      return (
+        <div key={bot.id}>
+          <div
+            className={`${className} flex items-center justify-center`}
+            style={{
+              ...baseStyle,
+              clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+              filter: activeBotSkin.glow || hasTarget ? 'drop-shadow(0 0 8px rgba(34, 197, 94, 0.8))' : 'none'
+            }}
+          >
+            <Bot size={12} className="text-gray-900" />
+          </div>
+          
+          {/* Target line indicator */}
+          {hasTarget && (
+            <div
+              className="absolute w-0.5 bg-green-400 opacity-50"
+              style={{
+                left: `${bot.x + botSize/2}px`,
+                top: `${bot.y + botSize/2}px`,
+                transformOrigin: 'top',
+                transform: (() => {
+                  const target = collectibles.find(c => c.id === bot.targetId);
+                  if (target) {
+                    const dx = target.x - bot.x;
+                    const dy = target.y - bot.y;
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    return `rotate(${angle}deg) scaleY(${Math.min(length / 2, 50)})`;
+                  }
+                  return 'scaleY(0)';
+                })()
+              }}
+            />
+          )}
+        </div>
+      );
+    } else {
+      // Default square
+      return (
+        <div key={bot.id}>
+          <div
+            className={`${className} rounded-sm flex items-center justify-center`}
+            style={baseStyle}
+          >
+            <Bot size={12} className="text-gray-900" />
+          </div>
+          
+          {/* Target line indicator */}
+          {hasTarget && (
+            <div
+              className="absolute w-0.5 bg-green-400 opacity-50"
+              style={{
+                left: `${bot.x + botSize/2}px`,
+                top: `${bot.y + botSize/2}px`,
+                transformOrigin: 'top',
+                transform: (() => {
+                  const target = collectibles.find(c => c.id === bot.targetId);
+                  if (target) {
+                    const dx = target.x - bot.x;
+                    const dy = target.y - bot.y;
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    return `rotate(${angle}deg) scaleY(${Math.min(length / 2, 50)})`;
+                  }
+                  return 'scaleY(0)';
+                })()
+              }}
+            />
+          )}
+        </div>
+      );
+    }
   };
 
   const renderCollectible = (collectible: { id: number; x: number; y: number }) => {
@@ -899,7 +1095,7 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
             </div>
 
             {/* Collectible Skin */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 mb-3">
               <div className="w-6 h-6 flex items-center justify-center">
                 {activeCollectibleSkin.shape === 'circle' ? (
                   <div 
@@ -954,6 +1150,71 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
               <div>
                 <p className="text-sm font-medium">Collectible: {activeCollectibleSkin.name}</p>
                 <p className="text-xs text-gray-400">{activeCollectibleSkin.description}</p>
+              </div>
+            </div>
+
+            {/* Bot Skin */}
+            <div className="flex items-center gap-3">
+              <div className="w-7 h-7 flex items-center justify-center">
+                {activeBotSkin.shape === 'circle' ? (
+                  <div 
+                    className={`w-7 h-7 rounded-full ${activeBotSkin.pulse ? 'animate-pulse' : ''} flex items-center justify-center`}
+                    style={{ 
+                      backgroundColor: activeBotSkin.color,
+                      filter: activeBotSkin.glow ? 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.7))' : 'none'
+                    }}
+                  >
+                    <Bot size={10} className="text-gray-900" />
+                  </div>
+                ) : activeBotSkin.shape === 'triangle' ? (
+                  <div 
+                    className={activeBotSkin.pulse ? 'animate-pulse' : ''}
+                    style={{
+                      width: 0,
+                      height: 0,
+                      borderLeft: '14px solid transparent',
+                      borderRight: '14px solid transparent',
+                      borderBottom: `28px solid ${activeBotSkin.color}`,
+                      filter: activeBotSkin.glow ? 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.7))' : 'none'
+                    }}
+                  />
+                ) : activeBotSkin.shape === 'star' ? (
+                  <div 
+                    className={`text-base ${activeBotSkin.pulse ? 'animate-pulse' : ''}`}
+                    style={{ 
+                      color: activeBotSkin.color,
+                      filter: activeBotSkin.glow ? 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.7))' : 'none'
+                    }}
+                  >
+                    ★
+                  </div>
+                ) : activeBotSkin.shape === 'hexagon' ? (
+                  <div 
+                    className={`w-7 h-7 ${activeBotSkin.pulse ? 'animate-pulse' : ''} flex items-center justify-center`}
+                    style={{ 
+                      backgroundColor: activeBotSkin.color,
+                      clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+                      filter: activeBotSkin.glow ? 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.7))' : 'none'
+                    }}
+                  >
+                    <Bot size={10} className="text-gray-900" />
+                  </div>
+                ) : (
+                  <div 
+                    className={`w-7 h-7 ${activeBotSkin.pulse ? 'animate-pulse' : ''} flex items-center justify-center`}
+                    style={{ 
+                      backgroundColor: activeBotSkin.color,
+                      transform: activeBotSkin.shape === 'diamond' ? 'rotate(45deg)' : 'none',
+                      filter: activeBotSkin.glow ? 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.7))' : 'none'
+                    }}
+                  >
+                    <Bot size={10} className="text-gray-900" style={{ transform: activeBotSkin.shape === 'diamond' ? 'rotate(-45deg)' : 'none' }} />
+                  </div>
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-medium">Bot: {activeBotSkin.name}</p>
+                <p className="text-xs text-gray-400">{activeBotSkin.description}</p>
               </div>
             </div>
           </div>
