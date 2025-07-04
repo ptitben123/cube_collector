@@ -25,7 +25,8 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
     claimedTrophies,
     claimTrophyReward,
     upgradeLevel,
-    pointMultiplier
+    pointMultiplier,
+    activeCollectibleSkin
   } = useGameContext();
   
   const cubeSize = 30;
@@ -183,6 +184,182 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
     }
   };
 
+  const renderPlayerCube = () => {
+    const baseStyle: React.CSSProperties = {
+      left: `${cubePosition.x}px`,
+      top: `${cubePosition.y}px`,
+      width: `${cubeSize}px`,
+      height: `${cubeSize}px`,
+      backgroundColor: activeSkin.color,
+      boxShadow: [
+        activeSkin.glow ? '0 0 10px rgba(255, 255, 255, 0.7)' : '',
+        activeSkin.shadow ? `0 0 15px ${activeSkin.shadowColor}` : '',
+        activeSkin.border ? `0 0 0 2px ${activeSkin.borderColor}` : ''
+      ].filter(Boolean).join(', ')
+    };
+
+    const className = `absolute transition-transform duration-100 ease-out ${
+      activeSkin.pulse ? 'animate-pulse' : ''
+    }`;
+
+    if (activeSkin.shape === 'circle') {
+      return (
+        <div 
+          className={`${className} rounded-full`}
+          style={baseStyle}
+        />
+      );
+    } else if (activeSkin.shape === 'triangle') {
+      return (
+        <div 
+          className={className}
+          style={{
+            ...baseStyle,
+            width: 0,
+            height: 0,
+            borderLeft: `${cubeSize/2}px solid transparent`,
+            borderRight: `${cubeSize/2}px solid transparent`,
+            borderBottom: `${cubeSize}px solid ${activeSkin.color}`,
+            backgroundColor: 'transparent',
+            filter: activeSkin.glow ? 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.7))' : 'none'
+          }}
+        />
+      );
+    } else if (activeSkin.shape === 'diamond') {
+      return (
+        <div 
+          className={className}
+          style={{
+            ...baseStyle,
+            transform: 'rotate(45deg)',
+            borderRadius: activeSkin.isRounded ? '4px' : '0'
+          }}
+        />
+      );
+    } else if (activeSkin.shape === 'star') {
+      return (
+        <div 
+          className={`${className} flex items-center justify-center text-2xl font-bold`}
+          style={{
+            ...baseStyle,
+            color: activeSkin.color,
+            backgroundColor: 'transparent',
+            filter: activeSkin.glow ? 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.7))' : 'none'
+          }}
+        >
+          ★
+        </div>
+      );
+    } else if (activeSkin.shape === 'hexagon') {
+      return (
+        <div 
+          className={className}
+          style={{
+            ...baseStyle,
+            clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+            filter: activeSkin.glow ? 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.7))' : 'none'
+          }}
+        />
+      );
+    } else {
+      // Default square
+      return (
+        <div 
+          className={className}
+          style={{
+            ...baseStyle,
+            borderRadius: activeSkin.isRounded ? '4px' : '0',
+            transform: activeSkin.rotate ? 'rotate(45deg)' : 'none'
+          }}
+        />
+      );
+    }
+  };
+
+  const renderCollectible = (collectible: { id: number; x: number; y: number }) => {
+    const baseStyle: React.CSSProperties = {
+      left: `${collectible.x}px`,
+      top: `${collectible.y}px`,
+      width: `${collectibleSize}px`,
+      height: `${collectibleSize}px`,
+      backgroundColor: activeCollectibleSkin.color,
+      filter: activeCollectibleSkin.glow ? 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.7))' : 'none'
+    };
+
+    const className = `absolute ${activeCollectibleSkin.pulse ? 'animate-pulse' : ''}`;
+
+    if (activeCollectibleSkin.shape === 'circle') {
+      return (
+        <div 
+          key={collectible.id}
+          className={`${className} rounded-full`}
+          style={baseStyle}
+        />
+      );
+    } else if (activeCollectibleSkin.shape === 'triangle') {
+      return (
+        <div 
+          key={collectible.id}
+          className={className}
+          style={{
+            ...baseStyle,
+            width: 0,
+            height: 0,
+            borderLeft: `${collectibleSize/2}px solid transparent`,
+            borderRight: `${collectibleSize/2}px solid transparent`,
+            borderBottom: `${collectibleSize}px solid ${activeCollectibleSkin.color}`,
+            backgroundColor: 'transparent'
+          }}
+        />
+      );
+    } else if (activeCollectibleSkin.shape === 'diamond') {
+      return (
+        <div 
+          key={collectible.id}
+          className={className}
+          style={{
+            ...baseStyle,
+            transform: 'rotate(45deg)'
+          }}
+        />
+      );
+    } else if (activeCollectibleSkin.shape === 'star') {
+      return (
+        <div 
+          key={collectible.id}
+          className={`${className} flex items-center justify-center text-xs font-bold`}
+          style={{
+            ...baseStyle,
+            color: activeCollectibleSkin.color,
+            backgroundColor: 'transparent'
+          }}
+        >
+          ★
+        </div>
+      );
+    } else if (activeCollectibleSkin.shape === 'hexagon') {
+      return (
+        <div 
+          key={collectible.id}
+          className={className}
+          style={{
+            ...baseStyle,
+            clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)'
+          }}
+        />
+      );
+    } else {
+      // Default square
+      return (
+        <div 
+          key={collectible.id}
+          className={className}
+          style={baseStyle}
+        />
+      );
+    }
+  };
+
   return (
     <div className="w-full max-w-7xl flex gap-6">
       {/* Trophy Road Sidebar */}
@@ -293,25 +470,7 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
           ref={gameAreaRef}
           className="bg-gray-800 border-2 border-gray-700 rounded-lg w-full h-[500px] relative overflow-hidden"
         >
-          <div 
-            className={`absolute transition-transform duration-100 ease-out ${
-              activeSkin.pulse ? 'animate-pulse' : ''
-            }`}
-            style={{ 
-              left: `${cubePosition.x}px`, 
-              top: `${cubePosition.y}px`, 
-              width: `${cubeSize}px`, 
-              height: `${cubeSize}px`,
-              backgroundColor: activeSkin.color,
-              borderRadius: activeSkin.isRounded ? '4px' : '0',
-              transform: activeSkin.rotate ? 'rotate(45deg)' : 'none',
-              boxShadow: [
-                activeSkin.glow ? '0 0 10px rgba(255, 255, 255, 0.7)' : '',
-                activeSkin.shadow ? `0 0 15px ${activeSkin.shadowColor}` : '',
-                activeSkin.border ? `0 0 0 2px ${activeSkin.borderColor}` : ''
-              ].filter(Boolean).join(', '),
-            }}
-          />
+          {renderPlayerCube()}
 
           {magnetRange > 0 && (
             <div
@@ -325,18 +484,7 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
             />
           )}
 
-          {collectibles.map(collectible => (
-            <div 
-              key={collectible.id}
-              className="absolute bg-yellow-400 animate-pulse"
-              style={{ 
-                left: `${collectible.x}px`, 
-                top: `${collectible.y}px`, 
-                width: `${collectibleSize}px`, 
-                height: `${collectibleSize}px` 
-              }}
-            />
-          ))}
+          {collectibles.map(collectible => renderCollectible(collectible))}
         </div>
 
         {/* Controls Info */}
@@ -353,26 +501,134 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
         </div>
         
         <div className="space-y-4">
-          {/* Current Skin */}
+          {/* Current Skins */}
           <div className="p-3 bg-gray-700 rounded-lg">
-            <h4 className="text-sm font-medium mb-2 text-gray-300">Active Skin</h4>
-            <div className="flex items-center gap-3">
-              <div 
-                className={`w-8 h-8 ${activeSkin.pulse ? 'animate-pulse' : ''}`}
-                style={{ 
-                  backgroundColor: activeSkin.color,
-                  borderRadius: activeSkin.isRounded ? '2px' : '0',
-                  transform: activeSkin.rotate ? 'rotate(45deg)' : 'none',
-                  boxShadow: [
-                    activeSkin.glow ? '0 0 8px rgba(255, 255, 255, 0.7)' : '',
-                    activeSkin.shadow ? `0 0 10px ${activeSkin.shadowColor}` : '',
-                    activeSkin.border ? `0 0 0 1px ${activeSkin.borderColor}` : ''
-                  ].filter(Boolean).join(', ')
-                }}
-              />
+            <h4 className="text-sm font-medium mb-2 text-gray-300">Active Skins</h4>
+            
+            {/* Player Skin */}
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 flex items-center justify-center">
+                {activeSkin.shape === 'circle' ? (
+                  <div 
+                    className={`w-8 h-8 rounded-full ${activeSkin.pulse ? 'animate-pulse' : ''}`}
+                    style={{ 
+                      backgroundColor: activeSkin.color,
+                      boxShadow: [
+                        activeSkin.glow ? '0 0 8px rgba(255, 255, 255, 0.7)' : '',
+                        activeSkin.shadow ? `0 0 10px ${activeSkin.shadowColor}` : '',
+                        activeSkin.border ? `0 0 0 1px ${activeSkin.borderColor}` : ''
+                      ].filter(Boolean).join(', ')
+                    }}
+                  />
+                ) : activeSkin.shape === 'triangle' ? (
+                  <div 
+                    className={activeSkin.pulse ? 'animate-pulse' : ''}
+                    style={{
+                      width: 0,
+                      height: 0,
+                      borderLeft: '16px solid transparent',
+                      borderRight: '16px solid transparent',
+                      borderBottom: `32px solid ${activeSkin.color}`,
+                      filter: activeSkin.glow ? 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.7))' : 'none'
+                    }}
+                  />
+                ) : activeSkin.shape === 'star' ? (
+                  <div 
+                    className={`text-lg ${activeSkin.pulse ? 'animate-pulse' : ''}`}
+                    style={{ 
+                      color: activeSkin.color,
+                      filter: activeSkin.glow ? 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.7))' : 'none'
+                    }}
+                  >
+                    ★
+                  </div>
+                ) : activeSkin.shape === 'hexagon' ? (
+                  <div 
+                    className={`w-8 h-8 ${activeSkin.pulse ? 'animate-pulse' : ''}`}
+                    style={{ 
+                      backgroundColor: activeSkin.color,
+                      clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+                      filter: activeSkin.glow ? 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.7))' : 'none'
+                    }}
+                  />
+                ) : (
+                  <div 
+                    className={`w-8 h-8 ${activeSkin.pulse ? 'animate-pulse' : ''}`}
+                    style={{ 
+                      backgroundColor: activeSkin.color,
+                      borderRadius: activeSkin.isRounded ? '2px' : '0',
+                      transform: activeSkin.rotate || activeSkin.shape === 'diamond' ? 'rotate(45deg)' : 'none',
+                      boxShadow: [
+                        activeSkin.glow ? '0 0 8px rgba(255, 255, 255, 0.7)' : '',
+                        activeSkin.shadow ? `0 0 10px ${activeSkin.shadowColor}` : '',
+                        activeSkin.border ? `0 0 0 1px ${activeSkin.borderColor}` : ''
+                      ].filter(Boolean).join(', ')
+                    }}
+                  />
+                )}
+              </div>
               <div>
-                <p className="text-sm font-medium">{activeSkin.name}</p>
+                <p className="text-sm font-medium">Player: {activeSkin.name}</p>
                 <p className="text-xs text-gray-400">{activeSkin.description}</p>
+              </div>
+            </div>
+
+            {/* Collectible Skin */}
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 flex items-center justify-center">
+                {activeCollectibleSkin.shape === 'circle' ? (
+                  <div 
+                    className={`w-6 h-6 rounded-full ${activeCollectibleSkin.pulse ? 'animate-pulse' : ''}`}
+                    style={{ 
+                      backgroundColor: activeCollectibleSkin.color,
+                      filter: activeCollectibleSkin.glow ? 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.7))' : 'none'
+                    }}
+                  />
+                ) : activeCollectibleSkin.shape === 'triangle' ? (
+                  <div 
+                    className={activeCollectibleSkin.pulse ? 'animate-pulse' : ''}
+                    style={{
+                      width: 0,
+                      height: 0,
+                      borderLeft: '12px solid transparent',
+                      borderRight: '12px solid transparent',
+                      borderBottom: `24px solid ${activeCollectibleSkin.color}`,
+                      filter: activeCollectibleSkin.glow ? 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.7))' : 'none'
+                    }}
+                  />
+                ) : activeCollectibleSkin.shape === 'star' ? (
+                  <div 
+                    className={`text-sm ${activeCollectibleSkin.pulse ? 'animate-pulse' : ''}`}
+                    style={{ 
+                      color: activeCollectibleSkin.color,
+                      filter: activeCollectibleSkin.glow ? 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.7))' : 'none'
+                    }}
+                  >
+                    ★
+                  </div>
+                ) : activeCollectibleSkin.shape === 'hexagon' ? (
+                  <div 
+                    className={`w-6 h-6 ${activeCollectibleSkin.pulse ? 'animate-pulse' : ''}`}
+                    style={{ 
+                      backgroundColor: activeCollectibleSkin.color,
+                      clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+                      filter: activeCollectibleSkin.glow ? 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.7))' : 'none'
+                    }}
+                  />
+                ) : (
+                  <div 
+                    className={`w-6 h-6 ${activeCollectibleSkin.pulse ? 'animate-pulse' : ''}`}
+                    style={{ 
+                      backgroundColor: activeCollectibleSkin.color,
+                      transform: activeCollectibleSkin.shape === 'diamond' ? 'rotate(45deg)' : 'none',
+                      filter: activeCollectibleSkin.glow ? 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.7))' : 'none'
+                    }}
+                  />
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-medium">Collectible: {activeCollectibleSkin.name}</p>
+                <p className="text-xs text-gray-400">{activeCollectibleSkin.description}</p>
               </div>
             </div>
           </div>

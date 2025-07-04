@@ -19,6 +19,21 @@ interface Skin {
   rainbow?: boolean;
   metallic?: boolean;
   custom?: boolean;
+  shape?: 'square' | 'circle' | 'triangle' | 'diamond' | 'star' | 'hexagon';
+}
+
+interface CollectibleSkin {
+  name: string;
+  description: string;
+  color: string;
+  price: number;
+  shape?: 'square' | 'circle' | 'triangle' | 'diamond' | 'star' | 'hexagon';
+  glow?: boolean;
+  pulse?: boolean;
+  border?: boolean;
+  borderColor?: string;
+  shadow?: boolean;
+  shadowColor?: string;
 }
 
 interface Upgrade {
@@ -65,6 +80,8 @@ interface SaveData {
   totalPointsGained: number;
   saveVersion: string;
   lastSaved: string;
+  unlockedCollectibleSkins: string[];
+  activeCollectibleSkinId: string;
 }
 
 interface GameContextType {
@@ -97,6 +114,11 @@ interface GameContextType {
   exportSave: () => void;
   importSave: (file: File) => Promise<boolean>;
   lastSaved: string;
+  collectibleSkins: Record<string, CollectibleSkin>;
+  unlockedCollectibleSkins: string[];
+  activeCollectibleSkin: CollectibleSkin;
+  setActiveCollectibleSkin: (skinId: string) => void;
+  purchaseCollectibleSkin: (skinId: string, price: number) => void;
 }
 
 interface GameProviderProps {
@@ -117,38 +139,44 @@ const defaultSkins: Record<string, Skin> = {
     name: 'Default',
     description: 'The classic cube',
     color: '#ffffff',
-    price: 0
+    price: 0,
+    shape: 'square'
   },
   red: {
     name: 'Red Cube',
     description: 'A fiery red cube',
     color: '#ef4444',
-    price: 100
+    price: 100,
+    shape: 'square'
   },
   blue: {
     name: 'Blue Cube',
     description: 'A cool blue cube',
     color: '#3b82f6',
-    price: 150
+    price: 150,
+    shape: 'square'
   },
   green: {
     name: 'Green Cube',
     description: 'A natural green cube',
     color: '#22c55e',
-    price: 200
+    price: 200,
+    shape: 'square'
   },
   purple: {
     name: 'Purple Cube',
     description: 'A mystical purple cube',
     color: '#a855f7',
-    price: 300
+    price: 300,
+    shape: 'square'
   },
   gold: {
     name: 'Golden Cube',
     description: 'A precious golden cube',
     color: '#fbbf24',
     price: 500,
-    glow: true
+    glow: true,
+    shape: 'square'
   },
   diamond: {
     name: 'Diamond Cube',
@@ -156,7 +184,8 @@ const defaultSkins: Record<string, Skin> = {
     color: '#e5e7eb',
     price: 1000,
     glow: true,
-    pulse: true
+    pulse: true,
+    shape: 'diamond'
   },
   rainbow: {
     name: 'Rainbow Cube',
@@ -164,7 +193,8 @@ const defaultSkins: Record<string, Skin> = {
     color: '#ff6b6b',
     price: 2000,
     rainbow: true,
-    glow: true
+    glow: true,
+    shape: 'square'
   },
   neon: {
     name: 'Neon Cube',
@@ -172,7 +202,8 @@ const defaultSkins: Record<string, Skin> = {
     color: '#00ff88',
     price: 1500,
     glow: true,
-    pulse: true
+    pulse: true,
+    shape: 'square'
   },
   shadow: {
     name: 'Shadow Cube',
@@ -180,7 +211,8 @@ const defaultSkins: Record<string, Skin> = {
     color: '#1f2937',
     price: 800,
     shadow: true,
-    shadowColor: '#000000'
+    shadowColor: '#000000',
+    shape: 'square'
   },
   fire: {
     name: 'Fire Cube',
@@ -189,7 +221,8 @@ const defaultSkins: Record<string, Skin> = {
     price: 1200,
     glow: true,
     trail: true,
-    trailColor: '#ff6b35'
+    trailColor: '#ff6b35',
+    shape: 'square'
   },
   ice: {
     name: 'Ice Cube',
@@ -197,7 +230,8 @@ const defaultSkins: Record<string, Skin> = {
     color: '#87ceeb',
     price: 1000,
     glow: true,
-    isRounded: true
+    isRounded: true,
+    shape: 'square'
   },
   metal: {
     name: 'Metal Cube',
@@ -206,7 +240,8 @@ const defaultSkins: Record<string, Skin> = {
     price: 600,
     metallic: true,
     border: true,
-    borderColor: '#808080'
+    borderColor: '#808080',
+    shape: 'square'
   },
   plasma: {
     name: 'Plasma Cube',
@@ -215,7 +250,8 @@ const defaultSkins: Record<string, Skin> = {
     price: 3000,
     glow: true,
     pulse: true,
-    rotate: true
+    rotate: true,
+    shape: 'square'
   },
   void: {
     name: 'Void Cube',
@@ -224,7 +260,8 @@ const defaultSkins: Record<string, Skin> = {
     price: 2500,
     border: true,
     borderColor: '#8b5cf6',
-    glow: true
+    glow: true,
+    shape: 'square'
   },
   crystal: {
     name: 'Crystal Cube',
@@ -233,6 +270,72 @@ const defaultSkins: Record<string, Skin> = {
     price: 1800,
     isRounded: true,
     glow: true,
+    pulse: true,
+    shape: 'square'
+  },
+  // New shape-based skins
+  circle_blue: {
+    name: 'Blue Orb',
+    description: 'A smooth blue sphere',
+    color: '#3b82f6',
+    price: 400,
+    shape: 'circle',
+    glow: true
+  },
+  circle_red: {
+    name: 'Red Orb',
+    description: 'A fiery red sphere',
+    color: '#ef4444',
+    price: 450,
+    shape: 'circle',
+    pulse: true
+  },
+  triangle_green: {
+    name: 'Green Arrow',
+    description: 'A sharp green triangle',
+    color: '#22c55e',
+    price: 350,
+    shape: 'triangle'
+  },
+  triangle_purple: {
+    name: 'Purple Spike',
+    description: 'A mystical purple triangle',
+    color: '#a855f7',
+    price: 600,
+    shape: 'triangle',
+    glow: true
+  },
+  star_gold: {
+    name: 'Golden Star',
+    description: 'A shining golden star',
+    color: '#fbbf24',
+    price: 800,
+    shape: 'star',
+    glow: true,
+    pulse: true
+  },
+  star_silver: {
+    name: 'Silver Star',
+    description: 'A brilliant silver star',
+    color: '#e5e7eb',
+    price: 700,
+    shape: 'star',
+    glow: true
+  },
+  hexagon_cyan: {
+    name: 'Cyan Hex',
+    description: 'A futuristic cyan hexagon',
+    color: '#06b6d4',
+    price: 900,
+    shape: 'hexagon',
+    glow: true
+  },
+  hexagon_orange: {
+    name: 'Orange Hex',
+    description: 'A vibrant orange hexagon',
+    color: '#f97316',
+    price: 850,
+    shape: 'hexagon',
     pulse: true
   },
   legendary: {
@@ -245,7 +348,103 @@ const defaultSkins: Record<string, Skin> = {
     pulse: true,
     rotate: true,
     trail: true,
-    trailColor: '#ff6b35'
+    trailColor: '#ff6b35',
+    shape: 'square'
+  }
+};
+
+const defaultCollectibleSkins: Record<string, CollectibleSkin> = {
+  default: {
+    name: 'Yellow Square',
+    description: 'Classic yellow collectible',
+    color: '#fbbf24',
+    price: 0,
+    shape: 'square'
+  },
+  red_square: {
+    name: 'Red Square',
+    description: 'A red collectible square',
+    color: '#ef4444',
+    price: 50,
+    shape: 'square'
+  },
+  blue_square: {
+    name: 'Blue Square',
+    description: 'A blue collectible square',
+    color: '#3b82f6',
+    price: 75,
+    shape: 'square'
+  },
+  green_circle: {
+    name: 'Green Dot',
+    description: 'A green circular collectible',
+    color: '#22c55e',
+    price: 100,
+    shape: 'circle'
+  },
+  purple_circle: {
+    name: 'Purple Orb',
+    description: 'A mystical purple orb',
+    color: '#a855f7',
+    price: 150,
+    shape: 'circle',
+    glow: true
+  },
+  orange_triangle: {
+    name: 'Orange Triangle',
+    description: 'A triangular orange collectible',
+    color: '#f97316',
+    price: 125,
+    shape: 'triangle'
+  },
+  cyan_triangle: {
+    name: 'Cyan Arrow',
+    description: 'A sharp cyan triangle',
+    color: '#06b6d4',
+    price: 175,
+    shape: 'triangle',
+    glow: true
+  },
+  pink_diamond: {
+    name: 'Pink Diamond',
+    description: 'A precious pink diamond',
+    color: '#ec4899',
+    price: 200,
+    shape: 'diamond',
+    glow: true,
+    pulse: true
+  },
+  gold_star: {
+    name: 'Gold Star',
+    description: 'A shining golden star',
+    color: '#fbbf24',
+    price: 300,
+    shape: 'star',
+    glow: true
+  },
+  silver_star: {
+    name: 'Silver Star',
+    description: 'A brilliant silver star',
+    color: '#e5e7eb',
+    price: 250,
+    shape: 'star'
+  },
+  teal_hex: {
+    name: 'Teal Hexagon',
+    description: 'A futuristic teal hexagon',
+    color: '#14b8a6',
+    price: 350,
+    shape: 'hexagon',
+    glow: true
+  },
+  rainbow_circle: {
+    name: 'Rainbow Orb',
+    description: 'A colorful rainbow orb',
+    color: '#ff6b6b',
+    price: 500,
+    shape: 'circle',
+    glow: true,
+    pulse: true
   }
 };
 
@@ -369,7 +568,7 @@ const trophyRoad: Trophy[] = [
   }
 ];
 
-const SAVE_VERSION = '1.0.0';
+const SAVE_VERSION = '1.1.0';
 const STORAGE_KEY = 'cubeCollectorData';
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -388,6 +587,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [profilePicture, setProfilePicture] = useState('');
   const [totalPointsGained, setTotalPointsGained] = useState(0);
   const [lastSaved, setLastSaved] = useState('');
+  const [unlockedCollectibleSkins, setUnlockedCollectibleSkins] = useState<string[]>(['default']);
+  const [activeCollectibleSkinId, setActiveCollectibleSkinId] = useState('default');
 
   const allSkins = { ...defaultSkins, ...customSkins };
 
@@ -434,6 +635,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     setProfilePicture(data.profilePicture || '');
     setTotalPointsGained(data.totalPointsGained || 0);
     setLastSaved(data.lastSaved || '');
+    setUnlockedCollectibleSkins(data.unlockedCollectibleSkins || ['default']);
+    setActiveCollectibleSkinId(data.activeCollectibleSkinId || 'default');
   };
 
   // Save data to both localStorage and sessionStorage whenever state changes
@@ -453,7 +656,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       profilePicture,
       totalPointsGained,
       saveVersion: SAVE_VERSION,
-      lastSaved: now
+      lastSaved: now,
+      unlockedCollectibleSkins,
+      activeCollectibleSkinId
     };
     
     const jsonData = JSON.stringify(dataToSave);
@@ -473,7 +678,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         console.error('Error saving to session storage:', sessionError);
       }
     }
-  }, [score, unlockedSkins, activeSkinId, controls, upgradeLevel, totalCollected, claimedTrophies, pointMultiplier, customSkins, nickname, profilePicture, totalPointsGained]);
+  }, [score, unlockedSkins, activeSkinId, controls, upgradeLevel, totalCollected, claimedTrophies, pointMultiplier, customSkins, nickname, profilePicture, totalPointsGained, unlockedCollectibleSkins, activeCollectibleSkinId]);
 
   const exportSave = () => {
     const dataToExport: SaveData = {
@@ -490,7 +695,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       profilePicture,
       totalPointsGained,
       saveVersion: SAVE_VERSION,
-      lastSaved: new Date().toLocaleString()
+      lastSaved: new Date().toLocaleString(),
+      unlockedCollectibleSkins,
+      activeCollectibleSkinId
     };
 
     const jsonString = JSON.stringify(dataToExport, null, 2);
@@ -548,6 +755,17 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     setActiveSkinId(skinId);
   };
 
+  const setActiveCollectibleSkin = (skinId: string) => {
+    setActiveCollectibleSkinId(skinId);
+  };
+
+  const purchaseCollectibleSkin = (skinId: string, price: number) => {
+    if (score < price) return;
+    
+    setScore(prev => prev - price);
+    setUnlockedCollectibleSkins(prev => [...prev, skinId]);
+  };
+
   const updateControls = (newControls: Controls) => {
     setControls(newControls);
   };
@@ -600,6 +818,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     setNickname('Player');
     setProfilePicture('');
     setLastSaved('');
+    setUnlockedCollectibleSkins(['default']);
+    setActiveCollectibleSkinId('default');
     localStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(STORAGE_KEY);
   };
@@ -625,7 +845,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       shadow: skinData.shadow || false,
       shadowColor: skinData.shadowColor || '#000000',
       trail: skinData.trail || false,
-      trailColor: skinData.trailColor || '#ffffff'
+      trailColor: skinData.trailColor || '#ffffff',
+      shape: skinData.shape || 'square'
     };
     
     setCustomSkins(prev => ({ ...prev, [skinId]: newSkin }));
@@ -669,7 +890,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     totalPointsGained,
     exportSave,
     importSave,
-    lastSaved
+    lastSaved,
+    collectibleSkins: defaultCollectibleSkins,
+    unlockedCollectibleSkins,
+    activeCollectibleSkin: defaultCollectibleSkins[activeCollectibleSkinId] || defaultCollectibleSkins.default,
+    setActiveCollectibleSkin,
+    purchaseCollectibleSkin
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

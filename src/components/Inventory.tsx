@@ -20,6 +20,7 @@ interface CustomSkinForm {
   shadowColor: string;
   trail: boolean;
   trailColor: string;
+  shape: 'square' | 'circle' | 'triangle' | 'diamond' | 'star' | 'hexagon';
 }
 
 const defaultCustomSkin: CustomSkinForm = {
@@ -35,11 +36,25 @@ const defaultCustomSkin: CustomSkinForm = {
   shadow: false,
   shadowColor: '#000000',
   trail: false,
-  trailColor: '#ffffff'
+  trailColor: '#ffffff',
+  shape: 'square'
 };
 
 const Inventory: React.FC<InventoryProps> = ({ onBack }) => {
-  const { skins, unlockedSkins, activeSkin, setActiveSkin, score, createCustomSkin } = useGameContext();
+  const { 
+    skins, 
+    unlockedSkins, 
+    activeSkin, 
+    setActiveSkin, 
+    score, 
+    createCustomSkin,
+    collectibleSkins,
+    unlockedCollectibleSkins,
+    activeCollectibleSkin,
+    setActiveCollectibleSkin
+  } = useGameContext();
+  
+  const [activeTab, setActiveTab] = useState<'player' | 'collectibles'>('player');
   const [showCustomizer, setShowCustomizer] = useState(false);
   const [customSkin, setCustomSkin] = useState<CustomSkinForm>(defaultCustomSkin);
   const [previewKey, setPreviewKey] = useState(0);
@@ -57,8 +72,87 @@ const Inventory: React.FC<InventoryProps> = ({ onBack }) => {
     setPreviewKey(prev => prev + 1);
   };
 
+  const renderSkinPreview = (skin: any, isCollectible = false) => {
+    const size = isCollectible ? 'w-8 h-8' : 'w-12 h-12';
+    const baseStyle: React.CSSProperties = {
+      backgroundColor: skin.color,
+      boxShadow: [
+        skin.glow ? '0 0 10px rgba(255, 255, 255, 0.7)' : '',
+        skin.shadow ? `0 0 15px ${skin.shadowColor}` : '',
+        skin.border ? `0 0 0 2px ${skin.borderColor}` : ''
+      ].filter(Boolean).join(', ')
+    };
+
+    if (skin.shape === 'circle') {
+      return (
+        <div 
+          className={`${size} rounded-full ${skin.pulse ? 'animate-pulse' : ''}`}
+          style={baseStyle}
+        />
+      );
+    } else if (skin.shape === 'triangle') {
+      return (
+        <div 
+          className={`${skin.pulse ? 'animate-pulse' : ''}`}
+          style={{
+            width: 0,
+            height: 0,
+            borderLeft: isCollectible ? '16px solid transparent' : '24px solid transparent',
+            borderRight: isCollectible ? '16px solid transparent' : '24px solid transparent',
+            borderBottom: isCollectible ? `32px solid ${skin.color}` : `48px solid ${skin.color}`,
+            backgroundColor: 'transparent',
+            filter: skin.glow ? 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.7))' : 'none'
+          }}
+        />
+      );
+    } else if (skin.shape === 'diamond') {
+      return (
+        <div 
+          className={`${size} ${skin.pulse ? 'animate-pulse' : ''}`}
+          style={{
+            ...baseStyle,
+            transform: 'rotate(45deg)',
+            borderRadius: skin.isRounded ? '4px' : '0'
+          }}
+        />
+      );
+    } else if (skin.shape === 'star') {
+      return (
+        <div 
+          className={`${size} ${skin.pulse ? 'animate-pulse' : ''} flex items-center justify-center text-xl font-bold`}
+          style={{ color: skin.color, filter: skin.glow ? 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.7))' : 'none' }}
+        >
+          ★
+        </div>
+      );
+    } else if (skin.shape === 'hexagon') {
+      return (
+        <div 
+          className={`${size} ${skin.pulse ? 'animate-pulse' : ''}`}
+          style={{
+            backgroundColor: skin.color,
+            clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+            filter: skin.glow ? 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.7))' : 'none'
+          }}
+        />
+      );
+    } else {
+      // Default square/rectangle
+      return (
+        <div 
+          className={`${size} ${skin.pulse ? 'animate-pulse' : ''}`}
+          style={{
+            ...baseStyle,
+            borderRadius: skin.isRounded ? '4px' : '0',
+            transform: skin.rotate ? 'rotate(45deg)' : 'none'
+          }}
+        />
+      );
+    }
+  };
+
   return (
-    <div className="w-full max-w-2xl p-6 bg-gray-800 rounded-lg shadow-lg">
+    <div className="w-full max-w-4xl p-6 bg-gray-800 rounded-lg shadow-lg">
       <div className="flex justify-between items-center mb-6">
         <button 
           onClick={onBack}
@@ -67,7 +161,7 @@ const Inventory: React.FC<InventoryProps> = ({ onBack }) => {
           <ArrowLeft size={24} />
         </button>
         <h2 className="text-2xl font-bold">Inventory</h2>
-        {score >= 30000 && !showCustomizer && (
+        {score >= 30000 && !showCustomizer && activeTab === 'player' && (
           <button
             onClick={() => setShowCustomizer(true)}
             className="p-2 bg-purple-600 hover:bg-purple-700 rounded-full transition-colors"
@@ -85,7 +179,27 @@ const Inventory: React.FC<InventoryProps> = ({ onBack }) => {
         )}
       </div>
 
-      {showCustomizer ? (
+      {/* Tab Navigation */}
+      <div className="flex mb-6 bg-gray-700 rounded-lg p-1">
+        <button
+          onClick={() => setActiveTab('player')}
+          className={`flex-1 py-2 px-4 rounded-md transition-colors ${
+            activeTab === 'player' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'
+          }`}
+        >
+          Player Skins
+        </button>
+        <button
+          onClick={() => setActiveTab('collectibles')}
+          className={`flex-1 py-2 px-4 rounded-md transition-colors ${
+            activeTab === 'collectibles' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'
+          }`}
+        >
+          Collectible Skins
+        </button>
+      </div>
+
+      {showCustomizer && activeTab === 'player' ? (
         <div className="mb-6 space-y-4">
           <h3 className="text-xl font-semibold">Create Custom Skin</h3>
           
@@ -121,6 +235,22 @@ const Inventory: React.FC<InventoryProps> = ({ onBack }) => {
                   onChange={(e) => updateCustomSkin({ color: e.target.value })}
                   className="w-full h-10 bg-gray-700 rounded-md cursor-pointer"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Shape</label>
+                <select
+                  value={customSkin.shape}
+                  onChange={(e) => updateCustomSkin({ shape: e.target.value as any })}
+                  className="w-full px-3 py-2 bg-gray-700 rounded-md"
+                >
+                  <option value="square">Square</option>
+                  <option value="circle">Circle</option>
+                  <option value="triangle">Triangle</option>
+                  <option value="diamond">Diamond</option>
+                  <option value="star">Star</option>
+                  <option value="hexagon">Hexagon</option>
+                </select>
               </div>
 
               <div className="space-y-2">
@@ -233,20 +363,9 @@ const Inventory: React.FC<InventoryProps> = ({ onBack }) => {
               <div className="mt-4">
                 <h4 className="text-sm font-medium mb-2">Preview</h4>
                 <div className="w-full aspect-square bg-gray-900 rounded-lg flex items-center justify-center">
-                  <div
-                    key={previewKey}
-                    className={`w-16 h-16 ${customSkin.pulse ? 'animate-pulse' : ''}`}
-                    style={{
-                      backgroundColor: customSkin.color,
-                      borderRadius: customSkin.isRounded ? '4px' : '0',
-                      transform: customSkin.rotate ? 'rotate(45deg)' : 'none',
-                      boxShadow: [
-                        customSkin.glow ? '0 0 10px rgba(255, 255, 255, 0.7)' : '',
-                        customSkin.shadow ? `0 0 15px ${customSkin.shadowColor}` : '',
-                        customSkin.border ? `0 0 0 2px ${customSkin.borderColor}` : ''
-                      ].filter(Boolean).join(', ')
-                    }}
-                  />
+                  <div key={previewKey}>
+                    {renderSkinPreview(customSkin)}
+                  </div>
                 </div>
               </div>
             </div>
@@ -265,55 +384,85 @@ const Inventory: React.FC<InventoryProps> = ({ onBack }) => {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Object.entries(skins)
-            .filter(([id]) => unlockedSkins.includes(id))
-            .map(([id, skin]) => {
-              const isActive = activeSkin.name === skin.name;
-              
-              return (
-                <div 
-                  key={id}
-                  className={`p-4 rounded-lg flex items-center ${
-                    isActive ? 'bg-blue-800 border border-blue-500' : 'bg-gray-700'
-                  }`}
-                >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {activeTab === 'player' ? (
+            Object.entries(skins)
+              .filter(([id]) => unlockedSkins.includes(id))
+              .map(([id, skin]) => {
+                const isActive = activeSkin.name === skin.name;
+                
+                return (
                   <div 
-                    className={`w-12 h-12 mr-4 ${skin.pulse ? 'animate-pulse' : ''}`}
-                    style={{ 
-                      backgroundColor: skin.color,
-                      borderRadius: skin.isRounded ? '4px' : '0',
-                      transform: skin.rotate ? 'rotate(45deg)' : 'none',
-                      boxShadow: [
-                        skin.glow ? '0 0 10px rgba(255, 255, 255, 0.7)' : '',
-                        skin.shadow ? `0 0 15px ${skin.shadowColor}` : '',
-                        skin.border ? `0 0 0 2px ${skin.borderColor}` : ''
-                      ].filter(Boolean).join(', ')
-                    }}
-                  />
-                  
-                  <div className="flex-1">
-                    <h3 className="text-lg font-medium">{skin.name}</h3>
-                    <p className="text-gray-400 text-sm">{skin.description}</p>
-                  </div>
-                  
-                  {isActive ? (
-                    <div className="bg-green-600 p-2 rounded-full">
-                      <Check size={20} />
+                    key={id}
+                    className={`p-4 rounded-lg flex flex-col items-center ${
+                      isActive ? 'bg-blue-800 border border-blue-500' : 'bg-gray-700'
+                    }`}
+                  >
+                    <div className="mb-3 flex items-center justify-center h-16">
+                      {renderSkinPreview(skin)}
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => setActiveSkin(id)}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md"
-                    >
-                      Equip
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+                    
+                    <div className="text-center mb-3">
+                      <h3 className="text-lg font-medium">{skin.name}</h3>
+                      <p className="text-gray-400 text-sm">{skin.description}</p>
+                    </div>
+                    
+                    {isActive ? (
+                      <div className="bg-green-600 p-2 rounded-full">
+                        <Check size={20} />
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setActiveSkin(id)}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md"
+                      >
+                        Equip
+                      </button>
+                    )}
+                  </div>
+                );
+              })
+          ) : (
+            Object.entries(collectibleSkins)
+              .filter(([id]) => unlockedCollectibleSkins.includes(id))
+              .map(([id, skin]) => {
+                const isActive = activeCollectibleSkin.name === skin.name;
+                
+                return (
+                  <div 
+                    key={id}
+                    className={`p-4 rounded-lg flex flex-col items-center ${
+                      isActive ? 'bg-blue-800 border border-blue-500' : 'bg-gray-700'
+                    }`}
+                  >
+                    <div className="mb-3 flex items-center justify-center h-12">
+                      {renderSkinPreview(skin, true)}
+                    </div>
+                    
+                    <div className="text-center mb-3">
+                      <h3 className="text-lg font-medium">{skin.name}</h3>
+                      <p className="text-gray-400 text-sm">{skin.description}</p>
+                    </div>
+                    
+                    {isActive ? (
+                      <div className="bg-green-600 p-2 rounded-full">
+                        <Check size={20} />
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setActiveCollectibleSkin(id)}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md"
+                      >
+                        Equip
+                      </button>
+                    )}
+                  </div>
+                );
+              })
+          )}
 
-          {unlockedSkins.length <= 1 && (
+          {((activeTab === 'player' && unlockedSkins.length <= 1) || 
+            (activeTab === 'collectibles' && unlockedCollectibleSkins.length <= 1)) && (
             <div className="col-span-full text-center p-4 bg-gray-700 rounded-lg">
               <p>Your inventory is empty! Visit the shop to buy some skins.</p>
             </div>
