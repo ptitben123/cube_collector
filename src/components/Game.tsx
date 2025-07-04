@@ -60,10 +60,16 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
       const newBots: BotInstance[] = [];
       
       for (let i = 0; i < botCount; i++) {
+        // Spread bots out to avoid initial clustering
+        const angle = (i / botCount) * 2 * Math.PI;
+        const radius = Math.min(bounds.width, bounds.height - 80) * 0.3;
+        const centerX = bounds.width / 2;
+        const centerY = (bounds.height - 80) / 2;
+        
         newBots.push({
           id: i,
-          x: Math.random() * (bounds.width - botSize),
-          y: Math.random() * (bounds.height - botSize),
+          x: Math.max(0, Math.min(bounds.width - botSize, centerX + Math.cos(angle) * radius)),
+          y: Math.max(0, Math.min(bounds.height - botSize - 80, centerY + Math.sin(angle) * radius)),
           targetId: null,
           speed: 1.5
         });
@@ -104,6 +110,23 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, [controls, onExit, addPoints]);
+
+  // Function to check if two circles collide
+  const checkCircleCollision = (x1: number, y1: number, r1: number, x2: number, y2: number, r2: number) => {
+    const dx = x1 - x2;
+    const dy = y1 - y2;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    return distance < (r1 + r2);
+  };
+
+  // Function to find available collectibles (not targeted by other bots)
+  const getAvailableCollectibles = (currentBotId: number) => {
+    const targetedIds = bots
+      .filter(bot => bot.id !== currentBotId && bot.targetId !== null)
+      .map(bot => bot.targetId);
+    
+    return collectibles.filter(collectible => !targetedIds.includes(collectible.id));
+  };
 
   // Game loop
   useEffect(() => {
@@ -157,25 +180,29 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
         return prevBots.map(bot => {
           let newBot = { ...bot };
           
-          // Find nearest collectible if no target
+          // Find nearest available collectible if no target or target is taken
           if (newBot.targetId === null || !collectibles.find(c => c.id === newBot.targetId)) {
-            const nearestCollectible = collectibles.reduce((nearest, collectible) => {
-              const dx = collectible.x - newBot.x;
-              const dy = collectible.y - newBot.y;
-              const distance = Math.sqrt(dx * dx + dy * dy);
-              
-              if (!nearest || distance < nearest.distance) {
-                return { collectible, distance };
-              }
-              return nearest;
-            }, null as { collectible: typeof collectibles[0], distance: number } | null);
+            const availableCollectibles = getAvailableCollectibles(newBot.id);
             
-            if (nearestCollectible) {
-              newBot.targetId = nearestCollectible.collectible.id;
+            if (availableCollectibles.length > 0) {
+              const nearestCollectible = availableCollectibles.reduce((nearest, collectible) => {
+                const dx = collectible.x - newBot.x;
+                const dy = collectible.y - newBot.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (!nearest || distance < nearest.distance) {
+                  return { collectible, distance };
+                }
+                return nearest;
+              }, null as { collectible: typeof collectibles[0], distance: number } | null);
+              
+              if (nearestCollectible) {
+                newBot.targetId = nearestCollectible.collectible.id;
+              }
             }
           }
           
-          // Move towards target
+          // Move towards target with collision avoidance
           if (newBot.targetId !== null) {
             const target = collectibles.find(c => c.id === newBot.targetId);
             if (target) {
@@ -184,8 +211,88 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
               const distance = Math.sqrt(dx * dx + dy * dy);
               
               if (distance > 5) {
-                newBot.x += (dx / distance) * newBot.speed;
-                newBot.y += (dy / distance) * newBot.speed;
+                let moveX = (dx / distance) * newBot.speed;
+                let moveY = (dy / distance) * newBot.speed;
+                
+                let newBotX = newBot.x + moveX;
+                let newBotY = newBot.y + moveY;
+                
+                // Check collision with other bots
+                let hasCollision = false;
+                for (const otherBot of prevBots) {
+                  if (otherBot.id !== newBot.id) {
+                    if (checkCircleCollision(newBotX + botSize/2, newBotY + botSize/2, botSize/2 + 5, 
+                                          otherBot.x + botSize/2, otherBot.y + botSize/2, botSize/2 + 5)) {
+                      hasCollision = true;
+                      break;
+                    }
+                  }
+                }
+                
+                // If collision detected, try alternative paths
+                if (hasCollision) {
+                  // Try moving perpendicular to the direct path
+                  const perpX = -moveY;
+                  const perpY = moveX;
+                  
+                  // Try right perpendicular
+                  let altX = newBot.x + perpX;
+                  let altY = newBot.y + perpY;
+                  let altCollision = false;
+                  
+                  for (const otherBot of prevBots) {
+                    if (otherBot.id !== newBot.id) {
+                      if (checkCircleCollision(altX + botSize/2, altY + botSize/2, botSize/2 + 5,
+                                            otherBot.x + botSize/2, otherBot.y + botSize/2, botSize/2 + 5)) {
+                        altCollision = true;
+                        break;
+                      }
+                    }
+                  }
+                  
+                  if (!altCollision && gameAreaRef.current) {
+                    const bounds = gameAreaRef.current.getBoundingClientRect();
+                    if (altX >= 0 && altX <= bounds.width - botSize && 
+                        altY >= 0 && altY <= bounds.height - botSize - 80) {
+                      newBotX = altX;
+                      newBotY = altY;
+                      hasCollision = false;
+                    }
+                  }
+                  
+                  // If still collision, try left perpendicular
+                  if (hasCollision) {
+                    altX = newBot.x - perpX;
+                    altY = newBot.y - perpY;
+                    altCollision = false;
+                    
+                    for (const otherBot of prevBots) {
+                      if (otherBot.id !== newBot.id) {
+                        if (checkCircleCollision(altX + botSize/2, altY + botSize/2, botSize/2 + 5,
+                                              otherBot.x + botSize/2, otherBot.y + botSize/2, botSize/2 + 5)) {
+                          altCollision = true;
+                          break;
+                        }
+                      }
+                    }
+                    
+                    if (!altCollision && gameAreaRef.current) {
+                      const bounds = gameAreaRef.current.getBoundingClientRect();
+                      if (altX >= 0 && altX <= bounds.width - botSize && 
+                          altY >= 0 && altY <= bounds.height - botSize - 80) {
+                        newBotX = altX;
+                        newBotY = altY;
+                        hasCollision = false;
+                      }
+                    }
+                  }
+                }
+                
+                // Only move if no collision
+                if (!hasCollision) {
+                  newBot.x = newBotX;
+                  newBot.y = newBotY;
+                }
               }
             }
           }
@@ -382,6 +489,9 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
   };
 
   const renderBot = (bot: BotInstance) => {
+    // Add visual indicator if bot has a target
+    const hasTarget = bot.targetId !== null && collectibles.find(c => c.id === bot.targetId);
+    
     return (
       <div
         key={bot.id}
@@ -391,12 +501,40 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
           top: `${bot.y}px`,
           width: `${botSize}px`,
           height: `${botSize}px`,
-          boxShadow: '0 0 5px rgba(34, 197, 94, 0.5)'
+          boxShadow: hasTarget 
+            ? '0 0 8px rgba(34, 197, 94, 0.8)' 
+            : '0 0 5px rgba(34, 197, 94, 0.5)',
+          border: hasTarget 
+            ? '2px solid #22c55e' 
+            : '1px solid #4ade80'
         }}
       >
         <div className="w-full h-full flex items-center justify-center">
           <Bot size={12} className="text-green-900" />
         </div>
+        
+        {/* Target line indicator */}
+        {hasTarget && (
+          <div
+            className="absolute w-0.5 bg-green-400 opacity-50"
+            style={{
+              left: `${botSize/2}px`,
+              top: `${botSize/2}px`,
+              transformOrigin: 'top',
+              transform: (() => {
+                const target = collectibles.find(c => c.id === bot.targetId);
+                if (target) {
+                  const dx = target.x - bot.x;
+                  const dy = target.y - bot.y;
+                  const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+                  const length = Math.sqrt(dx * dx + dy * dy);
+                  return `rotate(${angle}deg) scaleY(${Math.min(length / 2, 50)})`;
+                }
+                return 'scaleY(0)';
+              })()
+            }}
+          />
+        )}
       </div>
     );
   };
@@ -413,11 +551,14 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
 
     const className = `absolute ${activeCollectibleSkin.pulse ? 'animate-pulse' : ''}`;
 
+    // Check if this collectible is targeted by any bot
+    const isTargeted = bots.some(bot => bot.targetId === collectible.id);
+
     if (activeCollectibleSkin.shape === 'circle') {
       return (
         <div 
           key={collectible.id}
-          className={`${className} rounded-full`}
+          className={`${className} rounded-full ${isTargeted ? 'ring-2 ring-green-400 ring-opacity-50' : ''}`}
           style={baseStyle}
         />
       );
@@ -425,7 +566,7 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
       return (
         <div 
           key={collectible.id}
-          className={className}
+          className={`${className} ${isTargeted ? 'drop-shadow-lg' : ''}`}
           style={{
             ...baseStyle,
             width: 0,
@@ -433,7 +574,10 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
             borderLeft: `${collectibleSize/2}px solid transparent`,
             borderRight: `${collectibleSize/2}px solid transparent`,
             borderBottom: `${collectibleSize}px solid ${activeCollectibleSkin.color}`,
-            backgroundColor: 'transparent'
+            backgroundColor: 'transparent',
+            filter: isTargeted 
+              ? 'drop-shadow(0 0 8px rgba(34, 197, 94, 0.6))' 
+              : activeCollectibleSkin.glow ? 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.7))' : 'none'
           }}
         />
       );
@@ -441,7 +585,7 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
       return (
         <div 
           key={collectible.id}
-          className={className}
+          className={`${className} ${isTargeted ? 'ring-2 ring-green-400 ring-opacity-50' : ''}`}
           style={{
             ...baseStyle,
             transform: 'rotate(45deg)'
@@ -452,11 +596,14 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
       return (
         <div 
           key={collectible.id}
-          className={`${className} flex items-center justify-center text-xs font-bold`}
+          className={`${className} flex items-center justify-center text-xs font-bold ${isTargeted ? 'drop-shadow-lg' : ''}`}
           style={{
             ...baseStyle,
             color: activeCollectibleSkin.color,
-            backgroundColor: 'transparent'
+            backgroundColor: 'transparent',
+            filter: isTargeted 
+              ? 'drop-shadow(0 0 8px rgba(34, 197, 94, 0.6))' 
+              : activeCollectibleSkin.glow ? 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.7))' : 'none'
           }}
         >
           ★
@@ -466,7 +613,7 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
       return (
         <div 
           key={collectible.id}
-          className={className}
+          className={`${className} ${isTargeted ? 'ring-2 ring-green-400 ring-opacity-50' : ''}`}
           style={{
             ...baseStyle,
             clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)'
@@ -478,7 +625,7 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
       return (
         <div 
           key={collectible.id}
-          className={className}
+          className={`${className} ${isTargeted ? 'ring-2 ring-green-400 ring-opacity-50' : ''}`}
           style={baseStyle}
         />
       );
@@ -669,6 +816,12 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
               <div className="flex items-center justify-between">
                 <span className="text-sm">Next Bot Cost</span>
                 <span className="text-sm font-medium">10,000 pts</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Targeting</span>
+                <span className="text-sm font-medium">
+                  {bots.filter(bot => bot.targetId !== null).length}/{botCount}
+                </span>
               </div>
             </div>
           </div>
