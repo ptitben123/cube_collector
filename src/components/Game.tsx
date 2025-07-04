@@ -1,9 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useGameContext } from '../context/GameContext';
-import { ShoppingBag, Package, X, Trophy, Gauge, Zap, Magnet, Clock, Gift, Target } from 'lucide-react';
+import { ShoppingBag, Package, X, Trophy, Gauge, Zap, Magnet, Clock, Gift, Target, Bot, Plus } from 'lucide-react';
 
 interface GameProps {
   onExit: () => void;
+}
+
+interface BotInstance {
+  id: number;
+  x: number;
+  y: number;
+  targetId: number | null;
+  speed: number;
 }
 
 const Game: React.FC<GameProps> = ({ onExit }) => {
@@ -12,6 +20,8 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
   const [collectibles, setCollectibles] = useState<{ id: number; x: number; y: number }[]>([]);
   const [nextId, setNextId] = useState(0);
   const [lastSpawnTime, setLastSpawnTime] = useState(Date.now());
+  const [bots, setBots] = useState<BotInstance[]>([]);
+  const [nextBotId, setNextBotId] = useState(0);
   
   const { 
     score, 
@@ -26,11 +36,15 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
     claimTrophyReward,
     upgradeLevel,
     pointMultiplier,
-    activeCollectibleSkin
+    activeCollectibleSkin,
+    botCount,
+    purchaseBot,
+    spendPoints
   } = useGameContext();
   
   const cubeSize = 30;
   const collectibleSize = 15;
+  const botSize = 20;
   const speed = getUpgradeEffect('speed');
   const magnetRange = getUpgradeEffect('magnet');
   const spawnRateReduction = getUpgradeEffect('spawn');
@@ -38,6 +52,26 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
   const bonusChance = getUpgradeEffect('bonus');
   const comboMultiplier = getUpgradeEffect('combo');
   const keysPressed = useRef<{ [key: string]: boolean }>({});
+
+  // Initialize bots when botCount changes
+  useEffect(() => {
+    if (gameAreaRef.current) {
+      const bounds = gameAreaRef.current.getBoundingClientRect();
+      const newBots: BotInstance[] = [];
+      
+      for (let i = 0; i < botCount; i++) {
+        newBots.push({
+          id: i,
+          x: Math.random() * (bounds.width - botSize),
+          y: Math.random() * (bounds.height - botSize),
+          targetId: null,
+          speed: 1.5
+        });
+      }
+      
+      setBots(newBots);
+    }
+  }, [botCount]);
 
   // Handle key presses
   useEffect(() => {
@@ -85,7 +119,7 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
         const newCollectible = {
           id: nextId,
           x: Math.random() * (bounds.width - collectibleSize),
-          y: Math.random() * (bounds.height - collectibleSize)
+          y: Math.random() * (bounds.height - collectibleSize - 80) // Leave space for bot farm
         };
         setCollectibles(prev => [...prev, newCollectible]);
         setNextId(prev => prev + 1);
@@ -109,31 +143,95 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
         newX += speed;
       }
 
-      // Keep cube within bounds
+      // Keep cube within bounds (excluding bot farm area)
       if (gameAreaRef.current) {
         const bounds = gameAreaRef.current.getBoundingClientRect();
         newX = Math.max(0, Math.min(newX, bounds.width - cubeSize));
-        newY = Math.max(0, Math.min(newY, bounds.height - cubeSize));
+        newY = Math.max(0, Math.min(newY, bounds.height - cubeSize - 80));
       }
 
       setCubePosition({ x: newX, y: newY });
 
-      // Check collisions with collectibles
-      const collidedIds: number[] = [];
+      // Move bots and handle their AI
+      setBots(prevBots => {
+        return prevBots.map(bot => {
+          let newBot = { ...bot };
+          
+          // Find nearest collectible if no target
+          if (newBot.targetId === null || !collectibles.find(c => c.id === newBot.targetId)) {
+            const nearestCollectible = collectibles.reduce((nearest, collectible) => {
+              const dx = collectible.x - newBot.x;
+              const dy = collectible.y - newBot.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              
+              if (!nearest || distance < nearest.distance) {
+                return { collectible, distance };
+              }
+              return nearest;
+            }, null as { collectible: typeof collectibles[0], distance: number } | null);
+            
+            if (nearestCollectible) {
+              newBot.targetId = nearestCollectible.collectible.id;
+            }
+          }
+          
+          // Move towards target
+          if (newBot.targetId !== null) {
+            const target = collectibles.find(c => c.id === newBot.targetId);
+            if (target) {
+              const dx = target.x - newBot.x;
+              const dy = target.y - newBot.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              
+              if (distance > 5) {
+                newBot.x += (dx / distance) * newBot.speed;
+                newBot.y += (dy / distance) * newBot.speed;
+              }
+            }
+          }
+          
+          return newBot;
+        });
+      });
+
+      // Check collisions with collectibles (player)
+      const playerCollidedIds: number[] = [];
       collectibles.forEach(collectible => {
         const dx = (newX + cubeSize/2) - (collectible.x + collectibleSize/2);
         const dy = (newY + cubeSize/2) - (collectible.y + collectibleSize/2);
         const distance = Math.sqrt(dx * dx + dy * dy);
         
         if (distance <= (cubeSize/2 + collectibleSize/2 + magnetRange)) {
-          collidedIds.push(collectible.id);
+          playerCollidedIds.push(collectible.id);
           addPoints(1);
           addCollected();
         }
       });
 
-      if (collidedIds.length > 0) {
-        setCollectibles(prev => prev.filter(c => !collidedIds.includes(c.id)));
+      // Check collisions with collectibles (bots)
+      const botCollidedIds: number[] = [];
+      bots.forEach(bot => {
+        collectibles.forEach(collectible => {
+          const dx = (bot.x + botSize/2) - (collectible.x + collectibleSize/2);
+          const dy = (bot.y + botSize/2) - (collectible.y + collectibleSize/2);
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          if (distance <= (botSize/2 + collectibleSize/2)) {
+            botCollidedIds.push(collectible.id);
+            addPoints(1);
+            addCollected();
+          }
+        });
+      });
+
+      const allCollidedIds = [...playerCollidedIds, ...botCollidedIds];
+      if (allCollidedIds.length > 0) {
+        setCollectibles(prev => prev.filter(c => !allCollidedIds.includes(c.id)));
+        // Clear bot targets for collected items
+        setBots(prevBots => prevBots.map(bot => ({
+          ...bot,
+          targetId: allCollidedIds.includes(bot.targetId || -1) ? null : bot.targetId
+        })));
       }
 
       animationFrameId = requestAnimationFrame(gameLoop);
@@ -144,7 +242,7 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [cubePosition, collectibles, controls, speed, magnetRange, spawnRateReduction, nextId, lastSpawnTime, addPoints, addCollected]);
+  }, [cubePosition, collectibles, controls, speed, magnetRange, spawnRateReduction, nextId, lastSpawnTime, addPoints, addCollected, bots, botCount]);
 
   const getTrophyColor = (tier: string) => {
     switch (tier) {
@@ -181,6 +279,13 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
       case 'bonus': return `${(safeValue * 100).toFixed(0)}% chance`;
       case 'combo': return `${safeValue.toFixed(1)}x`;
       default: return safeValue.toString();
+    }
+  };
+
+  const handleBuyBot = () => {
+    if (score >= 10000) {
+      spendPoints(10000, '');
+      purchaseBot();
     }
   };
 
@@ -276,6 +381,26 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
     }
   };
 
+  const renderBot = (bot: BotInstance) => {
+    return (
+      <div
+        key={bot.id}
+        className="absolute bg-green-500 rounded-sm border border-green-400"
+        style={{
+          left: `${bot.x}px`,
+          top: `${bot.y}px`,
+          width: `${botSize}px`,
+          height: `${botSize}px`,
+          boxShadow: '0 0 5px rgba(34, 197, 94, 0.5)'
+        }}
+      >
+        <div className="w-full h-full flex items-center justify-center">
+          <Bot size={12} className="text-green-900" />
+        </div>
+      </div>
+    );
+  };
+
   const renderCollectible = (collectible: { id: number; x: number; y: number }) => {
     const baseStyle: React.CSSProperties = {
       left: `${collectible.x}px`,
@@ -363,7 +488,7 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
   return (
     <div className="w-full max-w-7xl flex gap-6">
       {/* Trophy Road Sidebar */}
-      <div className="w-80 bg-gray-800 rounded-lg p-4 h-[600px] overflow-y-auto">
+      <div className="w-80 bg-gray-800 rounded-lg p-4 h-[680px] overflow-y-auto">
         <div className="flex items-center gap-2 mb-4">
           <Trophy size={24} className="text-yellow-500" />
           <h3 className="text-lg font-semibold">Trophy Road</h3>
@@ -485,6 +610,35 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
           )}
 
           {collectibles.map(collectible => renderCollectible(collectible))}
+          {bots.map(bot => renderBot(bot))}
+        </div>
+
+        {/* Bot Farm Area */}
+        <div className="mt-4 bg-gray-700 rounded-lg p-4 h-20">
+          <div className="flex items-center justify-between h-full">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Bot size={24} className="text-green-500" />
+                <h3 className="text-lg font-semibold">Bot Farm</h3>
+              </div>
+              <div className="text-sm text-gray-400">
+                Active Bots: {botCount}
+              </div>
+            </div>
+            
+            <button
+              onClick={handleBuyBot}
+              disabled={score < 10000}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+                score >= 10000 
+                  ? 'bg-green-600 hover:bg-green-700 text-white' 
+                  : 'bg-gray-600 cursor-not-allowed text-gray-400'
+              }`}
+            >
+              <Plus size={16} />
+              Buy Bot (10,000 pts)
+            </button>
+          </div>
         </div>
 
         {/* Controls Info */}
@@ -494,13 +648,31 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
       </div>
 
       {/* Parameters Sidebar */}
-      <div className="w-80 bg-gray-800 rounded-lg p-4 h-[600px] overflow-y-auto">
+      <div className="w-80 bg-gray-800 rounded-lg p-4 h-[680px] overflow-y-auto">
         <div className="flex items-center gap-2 mb-4">
           <Gauge size={24} className="text-blue-500" />
           <h3 className="text-lg font-semibold">Parameters</h3>
         </div>
         
         <div className="space-y-4">
+          {/* Bot Farm Stats */}
+          <div className="p-3 bg-gray-700 rounded-lg">
+            <h4 className="text-sm font-medium mb-2 text-gray-300 flex items-center gap-2">
+              <Bot size={16} className="text-green-500" />
+              Bot Farm
+            </h4>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Active Bots</span>
+                <span className="text-sm font-medium">{botCount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Next Bot Cost</span>
+                <span className="text-sm font-medium">10,000 pts</span>
+              </div>
+            </div>
+          </div>
+
           {/* Current Skins */}
           <div className="p-3 bg-gray-700 rounded-lg">
             <h4 className="text-sm font-medium mb-2 text-gray-300">Active Skins</h4>

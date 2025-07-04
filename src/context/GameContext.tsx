@@ -82,6 +82,7 @@ interface SaveData {
   lastSaved: string;
   unlockedCollectibleSkins: string[];
   activeCollectibleSkinId: string;
+  botCount: number;
 }
 
 interface GameContextType {
@@ -119,6 +120,8 @@ interface GameContextType {
   activeCollectibleSkin: CollectibleSkin;
   setActiveCollectibleSkin: (skinId: string) => void;
   purchaseCollectibleSkin: (skinId: string, price: number) => void;
+  botCount: number;
+  purchaseBot: () => void;
 }
 
 interface GameProviderProps {
@@ -568,7 +571,7 @@ const trophyRoad: Trophy[] = [
   }
 ];
 
-const SAVE_VERSION = '1.1.0';
+const SAVE_VERSION = '1.2.0';
 const STORAGE_KEY = 'cubeCollectorData';
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -589,6 +592,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [lastSaved, setLastSaved] = useState('');
   const [unlockedCollectibleSkins, setUnlockedCollectibleSkins] = useState<string[]>(['default']);
   const [activeCollectibleSkinId, setActiveCollectibleSkinId] = useState('default');
+  const [botCount, setBotCount] = useState(0);
 
   const allSkins = { ...defaultSkins, ...customSkins };
 
@@ -637,6 +641,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     setLastSaved(data.lastSaved || '');
     setUnlockedCollectibleSkins(data.unlockedCollectibleSkins || ['default']);
     setActiveCollectibleSkinId(data.activeCollectibleSkinId || 'default');
+    setBotCount(data.botCount || 0);
   };
 
   // Save data to both localStorage and sessionStorage whenever state changes
@@ -658,7 +663,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       saveVersion: SAVE_VERSION,
       lastSaved: now,
       unlockedCollectibleSkins,
-      activeCollectibleSkinId
+      activeCollectibleSkinId,
+      botCount
     };
     
     const jsonData = JSON.stringify(dataToSave);
@@ -678,7 +684,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         console.error('Error saving to session storage:', sessionError);
       }
     }
-  }, [score, unlockedSkins, activeSkinId, controls, upgradeLevel, totalCollected, claimedTrophies, pointMultiplier, customSkins, nickname, profilePicture, totalPointsGained, unlockedCollectibleSkins, activeCollectibleSkinId]);
+  }, [score, unlockedSkins, activeSkinId, controls, upgradeLevel, totalCollected, claimedTrophies, pointMultiplier, customSkins, nickname, profilePicture, totalPointsGained, unlockedCollectibleSkins, activeCollectibleSkinId, botCount]);
 
   const exportSave = () => {
     const dataToExport: SaveData = {
@@ -697,7 +703,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       saveVersion: SAVE_VERSION,
       lastSaved: new Date().toLocaleString(),
       unlockedCollectibleSkins,
-      activeCollectibleSkinId
+      activeCollectibleSkinId,
+      botCount
     };
 
     const jsonString = JSON.stringify(dataToExport, null, 2);
@@ -748,7 +755,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     if (score < amount) return;
     
     setScore(prev => prev - amount);
-    setUnlockedSkins(prev => [...prev, skinId]);
+    if (skinId) {
+      setUnlockedSkins(prev => [...prev, skinId]);
+    }
   };
 
   const setActiveSkin = (skinId: string) => {
@@ -764,6 +773,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     
     setScore(prev => prev - price);
     setUnlockedCollectibleSkins(prev => [...prev, skinId]);
+  };
+
+  const purchaseBot = () => {
+    setBotCount(prev => prev + 1);
   };
 
   const updateControls = (newControls: Controls) => {
@@ -820,6 +833,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     setLastSaved('');
     setUnlockedCollectibleSkins(['default']);
     setActiveCollectibleSkinId('default');
+    setBotCount(0);
     localStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(STORAGE_KEY);
   };
@@ -895,7 +909,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     unlockedCollectibleSkins,
     activeCollectibleSkin: defaultCollectibleSkins[activeCollectibleSkinId] || defaultCollectibleSkins.default,
     setActiveCollectibleSkin,
-    purchaseCollectibleSkin
+    purchaseCollectibleSkin,
+    botCount,
+    purchaseBot
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
