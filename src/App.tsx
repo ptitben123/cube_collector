@@ -5,6 +5,7 @@ import Shop from './components/Shop';
 import Inventory from './components/Inventory';
 import Settings from './components/Settings';
 import Profile from './components/Profile';
+import TrophyRoad from './components/TrophyRoad';
 import { GameProvider } from './context/GameContext';
 
 function App() {
@@ -29,6 +30,9 @@ function App() {
         case '#/profile':
           setCurrentScreen('profile');
           break;
+        case '#/trophies':
+          setCurrentScreen('trophies');
+          break;
         default:
           setCurrentScreen('menu');
       }
@@ -48,11 +52,13 @@ function App() {
         {currentScreen === 'inventory' && <Inventory onBack={() => { window.location.hash = '#/game'; }} />}
         {currentScreen === 'settings' && <Settings onBack={() => { window.location.hash = ''; }} />}
         {currentScreen === 'profile' && <Profile onBack={() => { window.location.hash = ''; }} />}
+        {currentScreen === 'trophies' && <TrophyRoad onBack={() => { window.location.hash = ''; }} />}
         {currentScreen === 'menu' && (
           <MainMenu
             onPlay={() => { window.location.hash = '#/game'; }}
             onSettings={() => { window.location.hash = '#/settings'; }}
             onProfile={() => { window.location.hash = '#/profile'; }}
+            onTrophies={() => { window.location.hash = '#/trophies'; }}
           />
         )}
       </div>

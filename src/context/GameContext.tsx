@@ -64,7 +64,7 @@ interface Trophy {
   description: string;
   requirement: number;
   reward: {
-    type: 'points' | 'skin' | 'multiplier';
+    type: 'points' | 'skin' | 'multiplier' | 'collectible_skin' | 'bot_skin';
     value: number | string;
   };
   tier: 'bronze' | 'silver' | 'gold' | 'diamond' | 'legendary';
@@ -374,6 +374,66 @@ const defaultSkins: Record<string, Skin> = {
     trail: true,
     trailColor: '#ff6b35',
     shape: 'square'
+  },
+  // Trophy reward skins
+  cosmic: {
+    name: 'Cosmic Cube',
+    description: 'A cube from outer space',
+    color: '#4c1d95',
+    price: 0,
+    exclusive: true,
+    glow: true,
+    pulse: true,
+    border: true,
+    borderColor: '#8b5cf6',
+    shape: 'square'
+  },
+  phoenix: {
+    name: 'Phoenix Cube',
+    description: 'A cube reborn from flames',
+    color: '#dc2626',
+    price: 0,
+    exclusive: true,
+    glow: true,
+    trail: true,
+    trailColor: '#f97316',
+    shape: 'square'
+  },
+  galaxy: {
+    name: 'Galaxy Cube',
+    description: 'A cube containing galaxies',
+    color: '#1e1b4b',
+    price: 0,
+    exclusive: true,
+    glow: true,
+    pulse: true,
+    rainbow: true,
+    shape: 'square'
+  },
+  quantum: {
+    name: 'Quantum Cube',
+    description: 'A cube that exists in multiple dimensions',
+    color: '#059669',
+    price: 0,
+    exclusive: true,
+    glow: true,
+    pulse: true,
+    rotate: true,
+    shape: 'diamond'
+  },
+  eternal: {
+    name: 'Eternal Cube',
+    description: 'A cube that transcends time',
+    color: '#fbbf24',
+    price: 0,
+    exclusive: true,
+    glow: true,
+    pulse: true,
+    trail: true,
+    trailColor: '#ffffff',
+    border: true,
+    borderColor: '#f59e0b',
+    shape: 'star'
   }
 };
 
@@ -603,6 +663,47 @@ const defaultCollectibleSkins: Record<string, CollectibleSkin> = {
     border: true,
     borderColor: '#8b5cf6',
     glow: true
+  },
+  // Trophy reward collectible skins
+  celestial_star: {
+    name: 'Celestial Star',
+    description: 'A star from the heavens',
+    color: '#fbbf24',
+    price: 0,
+    shape: 'star',
+    glow: true,
+    pulse: true,
+    border: true,
+    borderColor: '#f59e0b'
+  },
+  nebula_circle: {
+    name: 'Nebula Orb',
+    description: 'An orb containing cosmic dust',
+    color: '#8b5cf6',
+    price: 0,
+    shape: 'circle',
+    glow: true,
+    pulse: true
+  },
+  meteor_diamond: {
+    name: 'Meteor Diamond',
+    description: 'A diamond forged in space',
+    color: '#ef4444',
+    price: 0,
+    shape: 'diamond',
+    glow: true,
+    trail: true
+  },
+  aurora_hex: {
+    name: 'Aurora Hexagon',
+    description: 'A hexagon with aurora colors',
+    color: '#06b6d4',
+    price: 0,
+    shape: 'hexagon',
+    glow: true,
+    pulse: true,
+    border: true,
+    borderColor: '#0891b2'
   }
 };
 
@@ -767,6 +868,48 @@ const defaultBotSkins: Record<string, BotSkin> = {
     glow: true,
     border: true,
     borderColor: '#bfdbfe'
+  },
+  // Trophy reward bot skins
+  titan_bot: {
+    name: 'Titan Bot',
+    description: 'A massive titan collection bot',
+    color: '#374151',
+    price: 0,
+    shape: 'square',
+    glow: true,
+    border: true,
+    borderColor: '#6b7280'
+  },
+  guardian_bot: {
+    name: 'Guardian Bot',
+    description: 'A protective guardian bot',
+    color: '#059669',
+    price: 0,
+    shape: 'hexagon',
+    glow: true,
+    pulse: true
+  },
+  sentinel_bot: {
+    name: 'Sentinel Bot',
+    description: 'An advanced sentinel bot',
+    color: '#dc2626',
+    price: 0,
+    shape: 'diamond',
+    glow: true,
+    pulse: true,
+    border: true,
+    borderColor: '#ef4444'
+  },
+  omega_bot: {
+    name: 'Omega Bot',
+    description: 'The ultimate collection bot',
+    color: '#7c3aed',
+    price: 0,
+    shape: 'star',
+    glow: true,
+    pulse: true,
+    border: true,
+    borderColor: '#8b5cf6'
   }
 };
 
@@ -857,11 +1000,27 @@ const trophyRoad: Trophy[] = [
     tier: 'silver'
   },
   {
+    id: 'collector_pro',
+    name: 'Collector Pro',
+    description: 'Collect 750 cubes',
+    requirement: 750,
+    reward: { type: 'collectible_skin', value: 'celestial_star' },
+    tier: 'silver'
+  },
+  {
     id: 'unstoppable',
     name: 'Unstoppable',
     description: 'Collect 1000 cubes',
     requirement: 1000,
     reward: { type: 'multiplier', value: 1.5 },
+    tier: 'gold'
+  },
+  {
+    id: 'automation_begins',
+    name: 'Automation Begins',
+    description: 'Collect 1500 cubes',
+    requirement: 1500,
+    reward: { type: 'bot_skin', value: 'titan_bot' },
     tier: 'gold'
   },
   {
@@ -873,6 +1032,22 @@ const trophyRoad: Trophy[] = [
     tier: 'gold'
   },
   {
+    id: 'cosmic_explorer',
+    name: 'Cosmic Explorer',
+    description: 'Collect 3500 cubes',
+    requirement: 3500,
+    reward: { type: 'skin', value: 'cosmic' },
+    tier: 'gold'
+  },
+  {
+    id: 'nebula_hunter',
+    name: 'Nebula Hunter',
+    description: 'Collect 4500 cubes',
+    requirement: 4500,
+    reward: { type: 'collectible_skin', value: 'nebula_circle' },
+    tier: 'gold'
+  },
+  {
     id: 'ultimate_collector',
     name: 'Ultimate Collector',
     description: 'Collect 5000 cubes',
@@ -881,11 +1056,115 @@ const trophyRoad: Trophy[] = [
     tier: 'diamond'
   },
   {
+    id: 'guardian_awakens',
+    name: 'Guardian Awakens',
+    description: 'Collect 6500 cubes',
+    requirement: 6500,
+    reward: { type: 'bot_skin', value: 'guardian_bot' },
+    tier: 'diamond'
+  },
+  {
+    id: 'phoenix_rising',
+    name: 'Phoenix Rising',
+    description: 'Collect 8000 cubes',
+    requirement: 8000,
+    reward: { type: 'skin', value: 'phoenix' },
+    tier: 'diamond'
+  },
+  {
+    id: 'meteor_shower',
+    name: 'Meteor Shower',
+    description: 'Collect 9500 cubes',
+    requirement: 9500,
+    reward: { type: 'collectible_skin', value: 'meteor_diamond' },
+    tier: 'diamond'
+  },
+  {
     id: 'transcendent',
     name: 'Transcendent',
     description: 'Collect 10000 cubes',
     requirement: 10000,
     reward: { type: 'multiplier', value: 2 },
+    tier: 'legendary'
+  },
+  {
+    id: 'galaxy_master',
+    name: 'Galaxy Master',
+    description: 'Collect 12500 cubes',
+    requirement: 12500,
+    reward: { type: 'skin', value: 'galaxy' },
+    tier: 'legendary'
+  },
+  {
+    id: 'sentinel_protocol',
+    name: 'Sentinel Protocol',
+    description: 'Collect 15000 cubes',
+    requirement: 15000,
+    reward: { type: 'bot_skin', value: 'sentinel_bot' },
+    tier: 'legendary'
+  },
+  {
+    id: 'aurora_borealis',
+    name: 'Aurora Borealis',
+    description: 'Collect 17500 cubes',
+    requirement: 17500,
+    reward: { type: 'collectible_skin', value: 'aurora_hex' },
+    tier: 'legendary'
+  },
+  {
+    id: 'quantum_leap',
+    name: 'Quantum Leap',
+    description: 'Collect 20000 cubes',
+    requirement: 20000,
+    reward: { type: 'skin', value: 'quantum' },
+    tier: 'legendary'
+  },
+  {
+    id: 'dimensional_rift',
+    name: 'Dimensional Rift',
+    description: 'Collect 25000 cubes',
+    requirement: 25000,
+    reward: { type: 'multiplier', value: 2.5 },
+    tier: 'legendary'
+  },
+  {
+    id: 'omega_protocol',
+    name: 'Omega Protocol',
+    description: 'Collect 30000 cubes',
+    requirement: 30000,
+    reward: { type: 'bot_skin', value: 'omega_bot' },
+    tier: 'legendary'
+  },
+  {
+    id: 'infinity_collector',
+    name: 'Infinity Collector',
+    description: 'Collect 35000 cubes',
+    requirement: 35000,
+    reward: { type: 'multiplier', value: 3 },
+    tier: 'legendary'
+  },
+  {
+    id: 'eternal_champion',
+    name: 'Eternal Champion',
+    description: 'Collect 40000 cubes',
+    requirement: 40000,
+    reward: { type: 'skin', value: 'eternal' },
+    tier: 'legendary'
+  },
+  {
+    id: 'universe_master',
+    name: 'Universe Master',
+    description: 'Collect 45000 cubes',
+    requirement: 45000,
+    reward: { type: 'multiplier', value: 4 },
+    tier: 'legendary'
+  },
+  {
+    id: 'omnipotent',
+    name: 'Omnipotent',
+    description: 'Collect 50000 cubes - The ultimate achievement',
+    requirement: 50000,
+    reward: { type: 'multiplier', value: 5 },
     tier: 'legendary'
   }
 ];
@@ -1149,6 +1428,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         setTotalPointsGained(prev => prev + (trophy.reward.value as number));
       } else if (trophy.reward.type === 'skin') {
         setUnlockedSkins(prev => [...prev, trophy.reward.value as string]);
+      } else if (trophy.reward.type === 'collectible_skin') {
+        setUnlockedCollectibleSkins(prev => [...prev, trophy.reward.value as string]);
+      } else if (trophy.reward.type === 'bot_skin') {
+        setUnlockedBotSkins(prev => [...prev, trophy.reward.value as string]);
       } else if (trophy.reward.type === 'multiplier') {
         setPointMultiplier(prev => prev * (trophy.reward.value as number));
       }

@@ -1,14 +1,15 @@
 import React from 'react';
-import { Square, Settings, User } from 'lucide-react';
+import { Square, Settings, User, Trophy } from 'lucide-react';
 import { useGameContext } from '../context/GameContext';
 
 interface MainMenuProps {
   onPlay: () => void;
   onSettings: () => void;
   onProfile: () => void;
+  onTrophies: () => void;
 }
 
-const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onSettings, onProfile }) => {
+const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onSettings, onProfile, onTrophies }) => {
   const { nickname, profilePicture } = useGameContext();
 
   return (
@@ -28,6 +29,14 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onSettings, onProfile }) =>
           className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-lg font-medium transition-colors"
         >
           Play
+        </button>
+        
+        <button 
+          onClick={onTrophies}
+          className="w-full py-3 px-6 bg-yellow-600 hover:bg-yellow-700 rounded-lg text-white text-lg font-medium transition-colors flex items-center justify-center gap-2"
+        >
+          <Trophy size={20} />
+          Trophy Road
         </button>
         
         <button 
