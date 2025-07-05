@@ -55,6 +55,7 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
   const [comboTimer, setComboTimer] = useState(0);
   const [lastCollectTime, setLastCollectTime] = useState(0);
   const [showParameters, setShowParameters] = useState(false);
+  const [lastSpawnTime, setLastSpawnTime] = useState(0);
   const gameLoopRef = useRef<number>();
   const collectibleIdRef = useRef(0);
   const botIdRef = useRef(0);
@@ -246,15 +247,23 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
   }, [playerPos, bots, magnetRange, pointMultiplier, combo, comboMultiplier, bonusChance, lastCollectTime, addPoints, addCollected]);
 
   const gameLoop = useCallback(() => {
+    const now = Date.now();
+    
     updatePlayerPosition();
     updateBots();
     checkCollisions();
 
-    // Reduced spawn rate - was 0.02, now 0.008 (much slower)
-    if (Math.random() < 0.008 + spawnRateBonus * 0.1) {
+    // MUCH slower spawn rate - only spawn every 2-3 seconds base rate
+    const baseSpawnInterval = 2000; // 2 seconds minimum between spawns
+    const spawnInterval = baseSpawnInterval - (spawnRateBonus * 200); // Upgrades reduce interval
+    const actualSpawnInterval = Math.max(1000, spawnInterval); // Never faster than 1 second
+    
+    if (now - lastSpawnTime > actualSpawnInterval) {
       // Also limit maximum collectibles on screen
-      if (collectibles.filter(c => !c.collected).length < 8) {
+      const activeCollectibles = collectibles.filter(c => !c.collected).length;
+      if (activeCollectibles < 5) { // Maximum 5 collectibles at once
         spawnCollectible();
+        setLastSpawnTime(now);
       }
     }
 
@@ -268,13 +277,16 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
     }
 
     gameLoopRef.current = requestAnimationFrame(gameLoop);
-  }, [updatePlayerPosition, updateBots, checkCollisions, spawnCollectible, spawnRateBonus, lastCollectTime, comboTimer, collectibles]);
+  }, [updatePlayerPosition, updateBots, checkCollisions, spawnCollectible, spawnRateBonus, lastCollectTime, comboTimer, collectibles, lastSpawnTime]);
 
   useEffect(() => {
-    // Initial collectibles - reduced from 5 to 3
-    for (let i = 0; i < 3; i++) {
+    // Initial collectibles - only 2 to start
+    for (let i = 0; i < 2; i++) {
       spawnCollectible();
     }
+    
+    // Set initial spawn time
+    setLastSpawnTime(Date.now());
 
     gameLoopRef.current = requestAnimationFrame(gameLoop);
     return () => {
