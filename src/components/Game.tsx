@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useGameContext } from '../context/GameContext';
-import { Trophy, Package, ShoppingCart } from 'lucide-react';
+import { Trophy, Package, ShoppingCart, Settings, Plus } from 'lucide-react';
 
 interface GameProps {
   onExit: () => void;
@@ -31,7 +31,7 @@ const GAME_HEIGHT = 500;
 const PLAYER_SIZE = 20;
 const COLLECTIBLE_SIZE = 12;
 const BOT_SIZE = 16;
-const BOT_FARM_HEIGHT = 100;
+const BOT_FARM_HEIGHT = 120;
 
 const Game: React.FC<GameProps> = ({ onExit }) => {
   const { 
@@ -43,7 +43,8 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
     addCollected,
     activeCollectibleSkin,
     botCount,
-    activeBotSkin
+    activeBotSkin,
+    spendPoints
   } = useGameContext();
 
   const [playerPos, setPlayerPos] = useState<Position>({ x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 });
@@ -53,6 +54,7 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
   const [combo, setCombo] = useState(0);
   const [comboTimer, setComboTimer] = useState(0);
   const [lastCollectTime, setLastCollectTime] = useState(0);
+  const [showParameters, setShowParameters] = useState(false);
   const gameLoopRef = useRef<number>();
   const collectibleIdRef = useRef(0);
   const botIdRef = useRef(0);
@@ -248,9 +250,12 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
     updateBots();
     checkCollisions();
 
-    // Spawn new collectibles
-    if (Math.random() < 0.02 + spawnRateBonus) {
-      spawnCollectible();
+    // Reduced spawn rate - was 0.02, now 0.008 (much slower)
+    if (Math.random() < 0.008 + spawnRateBonus * 0.1) {
+      // Also limit maximum collectibles on screen
+      if (collectibles.filter(c => !c.collected).length < 8) {
+        spawnCollectible();
+      }
     }
 
     // Remove collected collectibles after a delay
@@ -263,11 +268,11 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
     }
 
     gameLoopRef.current = requestAnimationFrame(gameLoop);
-  }, [updatePlayerPosition, updateBots, checkCollisions, spawnCollectible, spawnRateBonus, lastCollectTime, comboTimer]);
+  }, [updatePlayerPosition, updateBots, checkCollisions, spawnCollectible, spawnRateBonus, lastCollectTime, comboTimer, collectibles]);
 
   useEffect(() => {
-    // Initial collectibles
-    for (let i = 0; i < 5; i++) {
+    // Initial collectibles - reduced from 5 to 3
+    for (let i = 0; i < 3; i++) {
       spawnCollectible();
     }
 
@@ -278,6 +283,13 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
       }
     };
   }, [gameLoop, spawnCollectible]);
+
+  const handleBuyBot = () => {
+    if (score >= 10000) {
+      spendPoints(10000, '');
+      // The bot will be added automatically through the botCount context
+    }
+  };
 
   const renderSkin = (skin: any, size: string, isBot = false) => {
     const baseStyle: React.CSSProperties = {
@@ -394,6 +406,13 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
         
         <div className="flex space-x-2">
           <button 
+            onClick={() => setShowParameters(!showParameters)}
+            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-md flex items-center gap-2"
+          >
+            <Settings size={20} />
+            Parameters
+          </button>
+          <button 
             onClick={() => window.location.hash = '#/trophies'}
             className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-md flex items-center gap-2"
           >
@@ -416,6 +435,39 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
           </button>
         </div>
       </div>
+
+      {/* Parameters Panel */}
+      {showParameters && (
+        <div className="w-full max-w-4xl mb-4 p-4 bg-gray-800 rounded-lg border border-gray-600">
+          <h3 className="text-lg font-semibold mb-3">Current Parameters</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
+            <div className="bg-gray-700 p-2 rounded">
+              <div className="text-gray-400">Speed</div>
+              <div className="font-bold">{speed.toFixed(1)}</div>
+            </div>
+            <div className="bg-gray-700 p-2 rounded">
+              <div className="text-gray-400">Point Multiplier</div>
+              <div className="font-bold">{pointMultiplier.toFixed(1)}x</div>
+            </div>
+            <div className="bg-gray-700 p-2 rounded">
+              <div className="text-gray-400">Magnet Range</div>
+              <div className="font-bold">{magnetRange.toFixed(0)}px</div>
+            </div>
+            <div className="bg-gray-700 p-2 rounded">
+              <div className="text-gray-400">Spawn Rate</div>
+              <div className="font-bold">+{(spawnRateBonus * 100).toFixed(1)}%</div>
+            </div>
+            <div className="bg-gray-700 p-2 rounded">
+              <div className="text-gray-400">Bonus Chance</div>
+              <div className="font-bold">{(bonusChance * 100).toFixed(1)}%</div>
+            </div>
+            <div className="bg-gray-700 p-2 rounded">
+              <div className="text-gray-400">Combo Multiplier</div>
+              <div className="font-bold">{comboMultiplier.toFixed(1)}x</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Game Area */}
       <div className="relative bg-gray-800 border-2 border-gray-600 rounded-lg overflow-hidden">
@@ -479,8 +531,28 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
             className="absolute bottom-0 left-0 bg-gray-600 border-t-2 border-gray-500"
             style={{ width: GAME_WIDTH, height: BOT_FARM_HEIGHT }}
           >
-            <div className="absolute top-2 left-2 text-sm font-medium text-gray-300">
-              Bot Farm ({botCount} bots)
+            <div className="flex justify-between items-center p-3">
+              <div>
+                <div className="text-sm font-medium text-gray-300">
+                  Bot Farm ({botCount} bots)
+                </div>
+                <div className="text-xs text-gray-400">
+                  Bots automatically collect squares for you
+                </div>
+              </div>
+              
+              <button
+                onClick={handleBuyBot}
+                disabled={score < 10000}
+                className={`px-4 py-2 rounded-md flex items-center gap-2 ${
+                  score >= 10000 
+                    ? 'bg-green-600 hover:bg-green-700' 
+                    : 'bg-gray-700 cursor-not-allowed'
+                }`}
+              >
+                <Plus size={16} />
+                Buy Bot (10,000 pts)
+              </button>
             </div>
             
             {/* Bots in farm area */}
