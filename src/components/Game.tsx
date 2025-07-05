@@ -55,10 +55,10 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
   const [comboTimer, setComboTimer] = useState(0);
   const [lastCollectTime, setLastCollectTime] = useState(0);
   const [showParameters, setShowParameters] = useState(false);
-  const [lastSpawnTime, setLastSpawnTime] = useState(0);
   const gameLoopRef = useRef<number>();
   const collectibleIdRef = useRef(0);
   const botIdRef = useRef(0);
+  const lastSpawnTimeRef = useRef<number>(Date.now()); // Use ref instead of state
 
   const speed = getUpgradeEffect('speed');
   const pointMultiplier = getUpgradeEffect('points');
@@ -90,7 +90,7 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
       collected: false
     };
     setCollectibles(prev => [...prev, newCollectible]);
-    setLastSpawnTime(Date.now()); // Update spawn time when actually spawning
+    lastSpawnTimeRef.current = Date.now(); // Update ref when spawning
   }, []);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -254,15 +254,15 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
     updateBots();
     checkCollisions();
 
-    // FIXED: Much more controlled spawn rate
-    const baseSpawnInterval = 3000; // 3 seconds base interval
-    const spawnInterval = Math.max(1500, baseSpawnInterval - (spawnRateBonus * 300)); // Upgrades reduce interval, minimum 1.5 seconds
+    // PROPERLY FIXED: Controlled spawn rate using ref
+    const baseSpawnInterval = 4000; // 4 seconds base interval (slower)
+    const spawnInterval = Math.max(2000, baseSpawnInterval - (spawnRateBonus * 400)); // Minimum 2 seconds
     
-    // Count only non-collected collectibles
+    // Count only active (non-collected) collectibles
     const activeCollectibles = collectibles.filter(c => !c.collected).length;
     
     // Only spawn if enough time has passed AND we don't have too many collectibles
-    if (now - lastSpawnTime >= spawnInterval && activeCollectibles < 3) {
+    if (now - lastSpawnTimeRef.current >= spawnInterval && activeCollectibles < 2) {
       spawnCollectible();
     }
 
@@ -276,10 +276,13 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
     }
 
     gameLoopRef.current = requestAnimationFrame(gameLoop);
-  }, [updatePlayerPosition, updateBots, checkCollisions, spawnCollectible, spawnRateBonus, lastCollectTime, comboTimer, collectibles, lastSpawnTime]);
+  }, [updatePlayerPosition, updateBots, checkCollisions, spawnCollectible, spawnRateBonus, lastCollectTime, comboTimer, collectibles]);
 
   useEffect(() => {
-    // Initial setup - spawn only 1 collectible to start
+    // Initialize spawn time
+    lastSpawnTimeRef.current = Date.now();
+    
+    // Start with one collectible
     spawnCollectible();
     
     gameLoopRef.current = requestAnimationFrame(gameLoop);
