@@ -58,7 +58,7 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
   const gameLoopRef = useRef<number>();
   const collectibleIdRef = useRef(0);
   const botIdRef = useRef(0);
-  const lastSpawnTimeRef = useRef<number>(Date.now()); // Use ref instead of state
+  const lastSpawnTimeRef = useRef<number>(0);
 
   const speed = getUpgradeEffect('speed');
   const pointMultiplier = getUpgradeEffect('points');
@@ -90,7 +90,7 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
       collected: false
     };
     setCollectibles(prev => [...prev, newCollectible]);
-    lastSpawnTimeRef.current = Date.now(); // Update ref when spawning
+    lastSpawnTimeRef.current = Date.now();
   }, []);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -254,15 +254,15 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
     updateBots();
     checkCollisions();
 
-    // PROPERLY FIXED: Controlled spawn rate using ref
-    const baseSpawnInterval = 4000; // 4 seconds base interval (slower)
-    const spawnInterval = Math.max(2000, baseSpawnInterval - (spawnRateBonus * 400)); // Minimum 2 seconds
+    // FIXED: 1 collectible per second by default
+    const baseSpawnInterval = 1000; // 1 second base interval
+    const spawnInterval = Math.max(500, baseSpawnInterval - (spawnRateBonus * 100)); // Minimum 0.5 seconds
     
     // Count only active (non-collected) collectibles
     const activeCollectibles = collectibles.filter(c => !c.collected).length;
     
     // Only spawn if enough time has passed AND we don't have too many collectibles
-    if (now - lastSpawnTimeRef.current >= spawnInterval && activeCollectibles < 2) {
+    if (now - lastSpawnTimeRef.current >= spawnInterval && activeCollectibles < 5) {
       spawnCollectible();
     }
 
