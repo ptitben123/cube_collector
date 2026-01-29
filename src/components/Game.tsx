@@ -254,15 +254,15 @@ const Game: React.FC<GameProps> = ({ onExit }) => {
     updateBots();
     checkCollisions();
 
-    // FIXED: 1 collectible per second by default
+    // Only 1 collectible per second, only 1 on screen at a time
     const baseSpawnInterval = 1000; // 1 second base interval
     const spawnInterval = Math.max(500, baseSpawnInterval - (spawnRateBonus * 100)); // Minimum 0.5 seconds
     
-    // Count only active (non-collected) collectibles
+    // Count only active (non-collected) collectibles - limit to 1
     const activeCollectibles = collectibles.filter(c => !c.collected).length;
     
-    // Only spawn if enough time has passed AND we don't have too many collectibles
-    if (now - lastSpawnTimeRef.current >= spawnInterval && activeCollectibles < 5) {
+    // Only spawn if enough time has passed AND we have no active collectibles
+    if (now - lastSpawnTimeRef.current >= spawnInterval && activeCollectibles === 0) {
       spawnCollectible();
     }
 
